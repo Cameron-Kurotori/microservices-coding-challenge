@@ -10,10 +10,7 @@ Make sure to consider:
 
 
 ### Technology
-Our preferred technology stack is:
-- golang
-- postgresql (if necessary, for persistence)
-
+Please write the coding challenge in golang.
 
 Bonus points for:
 - docker (or any containers)
