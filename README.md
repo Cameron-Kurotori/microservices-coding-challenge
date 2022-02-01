@@ -13,6 +13,7 @@ Make sure to consider:
 Our preferred technology stack is:
 - golang
 - postgresql (if necessary, for persistence)
+- 
 Bonus points for:
 - docker (or any containers)
 - helm/kubernetes
