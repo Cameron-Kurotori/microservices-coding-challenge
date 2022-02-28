@@ -1,0 +1,27 @@
+syntax = "proto3";
+package distqueue;
+
+option go_package = "proto/distqueue";
+
+import "google/protobuf/any.proto";
+import "google/protobuf/timestamp.proto";
+
+
+message QueueItem {
+    // item is of any type and should be determine by the server
+    // keeps the abstraction reuable for multiple use cases
+    google.protobuf.Any item = 1;
+}
+
+message ServerQueueItem {
+    QueueItem item = 1;
+    google.protobuf.Timestamp prev_ts = 2;
+    google.protobuf.Timestamp ts = 3;
+}
+
+service DistributedQueueService {
+    // Sync initializes a connection between the workers and leader. Workers stream items
+    // to the leader and the leader will determine the order of the items
+    // and send it to all connected workers.
+    rpc Sync(stream QueueItem) returns (stream ServerQueueItem);
+}
