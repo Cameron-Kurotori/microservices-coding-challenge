@@ -37,51 +37,71 @@ func (m *MockDistributedQueueServiceClient) EXPECT() *MockDistributedQueueServic
 	return m.recorder
 }
 
-// Sync mocks base method.
-func (m *MockDistributedQueueServiceClient) Sync(ctx context.Context, opts ...grpc.CallOption) (distqueue.DistributedQueueService_SyncClient, error) {
+// Connect mocks base method.
+func (m *MockDistributedQueueServiceClient) Connect(ctx context.Context, opts ...grpc.CallOption) (distqueue.DistributedQueueService_ConnectClient, error) {
 	m.ctrl.T.Helper()
 	varargs := []interface{}{ctx}
 	for _, a := range opts {
 		varargs = append(varargs, a)
 	}
-	ret := m.ctrl.Call(m, "Sync", varargs...)
-	ret0, _ := ret[0].(distqueue.DistributedQueueService_SyncClient)
+	ret := m.ctrl.Call(m, "Connect", varargs...)
+	ret0, _ := ret[0].(distqueue.DistributedQueueService_ConnectClient)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// Sync indicates an expected call of Sync.
-func (mr *MockDistributedQueueServiceClientMockRecorder) Sync(ctx interface{}, opts ...interface{}) *gomock.Call {
+// Connect indicates an expected call of Connect.
+func (mr *MockDistributedQueueServiceClientMockRecorder) Connect(ctx interface{}, opts ...interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	varargs := append([]interface{}{ctx}, opts...)
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDistributedQueueServiceClient)(nil).Sync), varargs...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connect", reflect.TypeOf((*MockDistributedQueueServiceClient)(nil).Connect), varargs...)
 }
 
-// MockDistributedQueueService_SyncClient is a mock of DistributedQueueService_SyncClient interface.
-type MockDistributedQueueService_SyncClient struct {
+// GetRange mocks base method.
+func (m *MockDistributedQueueServiceClient) GetRange(ctx context.Context, in *distqueue.GetRangeRequest, opts ...grpc.CallOption) (distqueue.DistributedQueueService_GetRangeClient, error) {
+	m.ctrl.T.Helper()
+	varargs := []interface{}{ctx, in}
+	for _, a := range opts {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetRange", varargs...)
+	ret0, _ := ret[0].(distqueue.DistributedQueueService_GetRangeClient)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetRange indicates an expected call of GetRange.
+func (mr *MockDistributedQueueServiceClientMockRecorder) GetRange(ctx, in interface{}, opts ...interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	varargs := append([]interface{}{ctx, in}, opts...)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRange", reflect.TypeOf((*MockDistributedQueueServiceClient)(nil).GetRange), varargs...)
+}
+
+// MockDistributedQueueService_ConnectClient is a mock of DistributedQueueService_ConnectClient interface.
+type MockDistributedQueueService_ConnectClient struct {
 	ctrl     *gomock.Controller
-	recorder *MockDistributedQueueService_SyncClientMockRecorder
+	recorder *MockDistributedQueueService_ConnectClientMockRecorder
 }
 
-// MockDistributedQueueService_SyncClientMockRecorder is the mock recorder for MockDistributedQueueService_SyncClient.
-type MockDistributedQueueService_SyncClientMockRecorder struct {
-	mock *MockDistributedQueueService_SyncClient
+// MockDistributedQueueService_ConnectClientMockRecorder is the mock recorder for MockDistributedQueueService_ConnectClient.
+type MockDistributedQueueService_ConnectClientMockRecorder struct {
+	mock *MockDistributedQueueService_ConnectClient
 }
 
-// NewMockDistributedQueueService_SyncClient creates a new mock instance.
-func NewMockDistributedQueueService_SyncClient(ctrl *gomock.Controller) *MockDistributedQueueService_SyncClient {
-	mock := &MockDistributedQueueService_SyncClient{ctrl: ctrl}
-	mock.recorder = &MockDistributedQueueService_SyncClientMockRecorder{mock}
+// NewMockDistributedQueueService_ConnectClient creates a new mock instance.
+func NewMockDistributedQueueService_ConnectClient(ctrl *gomock.Controller) *MockDistributedQueueService_ConnectClient {
+	mock := &MockDistributedQueueService_ConnectClient{ctrl: ctrl}
+	mock.recorder = &MockDistributedQueueService_ConnectClientMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockDistributedQueueService_SyncClient) EXPECT() *MockDistributedQueueService_SyncClientMockRecorder {
+func (m *MockDistributedQueueService_ConnectClient) EXPECT() *MockDistributedQueueService_ConnectClientMockRecorder {
 	return m.recorder
 }
 
 // CloseSend mocks base method.
-func (m *MockDistributedQueueService_SyncClient) CloseSend() error {
+func (m *MockDistributedQueueService_ConnectClient) CloseSend() error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CloseSend")
 	ret0, _ := ret[0].(error)
@@ -89,13 +109,13 @@ func (m *MockDistributedQueueService_SyncClient) CloseSend() error {
 }
 
 // CloseSend indicates an expected call of CloseSend.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) CloseSend() *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) CloseSend() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).CloseSend))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).CloseSend))
 }
 
 // Context mocks base method.
-func (m *MockDistributedQueueService_SyncClient) Context() context.Context {
+func (m *MockDistributedQueueService_ConnectClient) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
@@ -103,13 +123,13 @@ func (m *MockDistributedQueueService_SyncClient) Context() context.Context {
 }
 
 // Context indicates an expected call of Context.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) Context() *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).Context))
 }
 
 // Header mocks base method.
-func (m *MockDistributedQueueService_SyncClient) Header() (metadata.MD, error) {
+func (m *MockDistributedQueueService_ConnectClient) Header() (metadata.MD, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Header")
 	ret0, _ := ret[0].(metadata.MD)
@@ -118,13 +138,13 @@ func (m *MockDistributedQueueService_SyncClient) Header() (metadata.MD, error) {
 }
 
 // Header indicates an expected call of Header.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) Header() *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) Header() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).Header))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).Header))
 }
 
 // Recv mocks base method.
-func (m *MockDistributedQueueService_SyncClient) Recv() (*distqueue.ServerQueueItem, error) {
+func (m *MockDistributedQueueService_ConnectClient) Recv() (*distqueue.ServerQueueItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*distqueue.ServerQueueItem)
@@ -133,13 +153,13 @@ func (m *MockDistributedQueueService_SyncClient) Recv() (*distqueue.ServerQueueI
 }
 
 // Recv indicates an expected call of Recv.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) Recv() *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) Recv() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).Recv))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).Recv))
 }
 
 // RecvMsg mocks base method.
-func (m_2 *MockDistributedQueueService_SyncClient) RecvMsg(m interface{}) error {
+func (m_2 *MockDistributedQueueService_ConnectClient) RecvMsg(m interface{}) error {
 	m_2.ctrl.T.Helper()
 	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
 	ret0, _ := ret[0].(error)
@@ -147,13 +167,13 @@ func (m_2 *MockDistributedQueueService_SyncClient) RecvMsg(m interface{}) error 
 }
 
 // RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) RecvMsg(m interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).RecvMsg), m)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).RecvMsg), m)
 }
 
 // Send mocks base method.
-func (m *MockDistributedQueueService_SyncClient) Send(arg0 *distqueue.QueueItem) error {
+func (m *MockDistributedQueueService_ConnectClient) Send(arg0 *distqueue.QueueItem) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -161,13 +181,13 @@ func (m *MockDistributedQueueService_SyncClient) Send(arg0 *distqueue.QueueItem)
 }
 
 // Send indicates an expected call of Send.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) Send(arg0 interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) Send(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).Send), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).Send), arg0)
 }
 
 // SendMsg mocks base method.
-func (m_2 *MockDistributedQueueService_SyncClient) SendMsg(m interface{}) error {
+func (m_2 *MockDistributedQueueService_ConnectClient) SendMsg(m interface{}) error {
 	m_2.ctrl.T.Helper()
 	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
 	ret0, _ := ret[0].(error)
@@ -175,13 +195,13 @@ func (m_2 *MockDistributedQueueService_SyncClient) SendMsg(m interface{}) error 
 }
 
 // SendMsg indicates an expected call of SendMsg.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) SendMsg(m interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) SendMsg(m interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).SendMsg), m)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).SendMsg), m)
 }
 
 // Trailer mocks base method.
-func (m *MockDistributedQueueService_SyncClient) Trailer() metadata.MD {
+func (m *MockDistributedQueueService_ConnectClient) Trailer() metadata.MD {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Trailer")
 	ret0, _ := ret[0].(metadata.MD)
@@ -189,9 +209,132 @@ func (m *MockDistributedQueueService_SyncClient) Trailer() metadata.MD {
 }
 
 // Trailer indicates an expected call of Trailer.
-func (mr *MockDistributedQueueService_SyncClientMockRecorder) Trailer() *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectClientMockRecorder) Trailer() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockDistributedQueueService_SyncClient)(nil).Trailer))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockDistributedQueueService_ConnectClient)(nil).Trailer))
+}
+
+// MockDistributedQueueService_GetRangeClient is a mock of DistributedQueueService_GetRangeClient interface.
+type MockDistributedQueueService_GetRangeClient struct {
+	ctrl     *gomock.Controller
+	recorder *MockDistributedQueueService_GetRangeClientMockRecorder
+}
+
+// MockDistributedQueueService_GetRangeClientMockRecorder is the mock recorder for MockDistributedQueueService_GetRangeClient.
+type MockDistributedQueueService_GetRangeClientMockRecorder struct {
+	mock *MockDistributedQueueService_GetRangeClient
+}
+
+// NewMockDistributedQueueService_GetRangeClient creates a new mock instance.
+func NewMockDistributedQueueService_GetRangeClient(ctrl *gomock.Controller) *MockDistributedQueueService_GetRangeClient {
+	mock := &MockDistributedQueueService_GetRangeClient{ctrl: ctrl}
+	mock.recorder = &MockDistributedQueueService_GetRangeClientMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDistributedQueueService_GetRangeClient) EXPECT() *MockDistributedQueueService_GetRangeClientMockRecorder {
+	return m.recorder
+}
+
+// CloseSend mocks base method.
+func (m *MockDistributedQueueService_GetRangeClient) CloseSend() error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CloseSend")
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// CloseSend indicates an expected call of CloseSend.
+func (mr *MockDistributedQueueService_GetRangeClientMockRecorder) CloseSend() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CloseSend", reflect.TypeOf((*MockDistributedQueueService_GetRangeClient)(nil).CloseSend))
+}
+
+// Context mocks base method.
+func (m *MockDistributedQueueService_GetRangeClient) Context() context.Context {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Context")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
+}
+
+// Context indicates an expected call of Context.
+func (mr *MockDistributedQueueService_GetRangeClientMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockDistributedQueueService_GetRangeClient)(nil).Context))
+}
+
+// Header mocks base method.
+func (m *MockDistributedQueueService_GetRangeClient) Header() (metadata.MD, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Header")
+	ret0, _ := ret[0].(metadata.MD)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Header indicates an expected call of Header.
+func (mr *MockDistributedQueueService_GetRangeClientMockRecorder) Header() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Header", reflect.TypeOf((*MockDistributedQueueService_GetRangeClient)(nil).Header))
+}
+
+// Recv mocks base method.
+func (m *MockDistributedQueueService_GetRangeClient) Recv() (*distqueue.ServerQueueItem, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Recv")
+	ret0, _ := ret[0].(*distqueue.ServerQueueItem)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// Recv indicates an expected call of Recv.
+func (mr *MockDistributedQueueService_GetRangeClientMockRecorder) Recv() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockDistributedQueueService_GetRangeClient)(nil).Recv))
+}
+
+// RecvMsg mocks base method.
+func (m_2 *MockDistributedQueueService_GetRangeClient) RecvMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecvMsg indicates an expected call of RecvMsg.
+func (mr *MockDistributedQueueService_GetRangeClientMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockDistributedQueueService_GetRangeClient)(nil).RecvMsg), m)
+}
+
+// SendMsg mocks base method.
+func (m_2 *MockDistributedQueueService_GetRangeClient) SendMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendMsg indicates an expected call of SendMsg.
+func (mr *MockDistributedQueueService_GetRangeClientMockRecorder) SendMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockDistributedQueueService_GetRangeClient)(nil).SendMsg), m)
+}
+
+// Trailer mocks base method.
+func (m *MockDistributedQueueService_GetRangeClient) Trailer() metadata.MD {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Trailer")
+	ret0, _ := ret[0].(metadata.MD)
+	return ret0
+}
+
+// Trailer indicates an expected call of Trailer.
+func (mr *MockDistributedQueueService_GetRangeClientMockRecorder) Trailer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Trailer", reflect.TypeOf((*MockDistributedQueueService_GetRangeClient)(nil).Trailer))
 }
 
 // MockDistributedQueueServiceServer is a mock of DistributedQueueServiceServer interface.
@@ -217,18 +360,32 @@ func (m *MockDistributedQueueServiceServer) EXPECT() *MockDistributedQueueServic
 	return m.recorder
 }
 
-// Sync mocks base method.
-func (m *MockDistributedQueueServiceServer) Sync(arg0 distqueue.DistributedQueueService_SyncServer) error {
+// Connect mocks base method.
+func (m *MockDistributedQueueServiceServer) Connect(arg0 distqueue.DistributedQueueService_ConnectServer) error {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sync", arg0)
+	ret := m.ctrl.Call(m, "Connect", arg0)
 	ret0, _ := ret[0].(error)
 	return ret0
 }
 
-// Sync indicates an expected call of Sync.
-func (mr *MockDistributedQueueServiceServerMockRecorder) Sync(arg0 interface{}) *gomock.Call {
+// Connect indicates an expected call of Connect.
+func (mr *MockDistributedQueueServiceServerMockRecorder) Connect(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockDistributedQueueServiceServer)(nil).Sync), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connect", reflect.TypeOf((*MockDistributedQueueServiceServer)(nil).Connect), arg0)
+}
+
+// GetRange mocks base method.
+func (m *MockDistributedQueueServiceServer) GetRange(arg0 *distqueue.GetRangeRequest, arg1 distqueue.DistributedQueueService_GetRangeServer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRange", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetRange indicates an expected call of GetRange.
+func (mr *MockDistributedQueueServiceServerMockRecorder) GetRange(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRange", reflect.TypeOf((*MockDistributedQueueServiceServer)(nil).GetRange), arg0, arg1)
 }
 
 // mustEmbedUnimplementedDistributedQueueServiceServer mocks base method.
@@ -278,31 +435,31 @@ func (mr *MockUnsafeDistributedQueueServiceServerMockRecorder) mustEmbedUnimplem
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "mustEmbedUnimplementedDistributedQueueServiceServer", reflect.TypeOf((*MockUnsafeDistributedQueueServiceServer)(nil).mustEmbedUnimplementedDistributedQueueServiceServer))
 }
 
-// MockDistributedQueueService_SyncServer is a mock of DistributedQueueService_SyncServer interface.
-type MockDistributedQueueService_SyncServer struct {
+// MockDistributedQueueService_ConnectServer is a mock of DistributedQueueService_ConnectServer interface.
+type MockDistributedQueueService_ConnectServer struct {
 	ctrl     *gomock.Controller
-	recorder *MockDistributedQueueService_SyncServerMockRecorder
+	recorder *MockDistributedQueueService_ConnectServerMockRecorder
 }
 
-// MockDistributedQueueService_SyncServerMockRecorder is the mock recorder for MockDistributedQueueService_SyncServer.
-type MockDistributedQueueService_SyncServerMockRecorder struct {
-	mock *MockDistributedQueueService_SyncServer
+// MockDistributedQueueService_ConnectServerMockRecorder is the mock recorder for MockDistributedQueueService_ConnectServer.
+type MockDistributedQueueService_ConnectServerMockRecorder struct {
+	mock *MockDistributedQueueService_ConnectServer
 }
 
-// NewMockDistributedQueueService_SyncServer creates a new mock instance.
-func NewMockDistributedQueueService_SyncServer(ctrl *gomock.Controller) *MockDistributedQueueService_SyncServer {
-	mock := &MockDistributedQueueService_SyncServer{ctrl: ctrl}
-	mock.recorder = &MockDistributedQueueService_SyncServerMockRecorder{mock}
+// NewMockDistributedQueueService_ConnectServer creates a new mock instance.
+func NewMockDistributedQueueService_ConnectServer(ctrl *gomock.Controller) *MockDistributedQueueService_ConnectServer {
+	mock := &MockDistributedQueueService_ConnectServer{ctrl: ctrl}
+	mock.recorder = &MockDistributedQueueService_ConnectServerMockRecorder{mock}
 	return mock
 }
 
 // EXPECT returns an object that allows the caller to indicate expected use.
-func (m *MockDistributedQueueService_SyncServer) EXPECT() *MockDistributedQueueService_SyncServerMockRecorder {
+func (m *MockDistributedQueueService_ConnectServer) EXPECT() *MockDistributedQueueService_ConnectServerMockRecorder {
 	return m.recorder
 }
 
 // Context mocks base method.
-func (m *MockDistributedQueueService_SyncServer) Context() context.Context {
+func (m *MockDistributedQueueService_ConnectServer) Context() context.Context {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Context")
 	ret0, _ := ret[0].(context.Context)
@@ -310,13 +467,13 @@ func (m *MockDistributedQueueService_SyncServer) Context() context.Context {
 }
 
 // Context indicates an expected call of Context.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) Context() *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) Context() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).Context))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).Context))
 }
 
 // Recv mocks base method.
-func (m *MockDistributedQueueService_SyncServer) Recv() (*distqueue.QueueItem, error) {
+func (m *MockDistributedQueueService_ConnectServer) Recv() (*distqueue.QueueItem, error) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Recv")
 	ret0, _ := ret[0].(*distqueue.QueueItem)
@@ -325,13 +482,13 @@ func (m *MockDistributedQueueService_SyncServer) Recv() (*distqueue.QueueItem, e
 }
 
 // Recv indicates an expected call of Recv.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) Recv() *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) Recv() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).Recv))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Recv", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).Recv))
 }
 
 // RecvMsg mocks base method.
-func (m_2 *MockDistributedQueueService_SyncServer) RecvMsg(m interface{}) error {
+func (m_2 *MockDistributedQueueService_ConnectServer) RecvMsg(m interface{}) error {
 	m_2.ctrl.T.Helper()
 	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
 	ret0, _ := ret[0].(error)
@@ -339,13 +496,13 @@ func (m_2 *MockDistributedQueueService_SyncServer) RecvMsg(m interface{}) error 
 }
 
 // RecvMsg indicates an expected call of RecvMsg.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) RecvMsg(m interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).RecvMsg), m)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).RecvMsg), m)
 }
 
 // Send mocks base method.
-func (m *MockDistributedQueueService_SyncServer) Send(arg0 *distqueue.ServerQueueItem) error {
+func (m *MockDistributedQueueService_ConnectServer) Send(arg0 *distqueue.ServerQueueItem) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Send", arg0)
 	ret0, _ := ret[0].(error)
@@ -353,13 +510,13 @@ func (m *MockDistributedQueueService_SyncServer) Send(arg0 *distqueue.ServerQueu
 }
 
 // Send indicates an expected call of Send.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).Send), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).Send), arg0)
 }
 
 // SendHeader mocks base method.
-func (m *MockDistributedQueueService_SyncServer) SendHeader(arg0 metadata.MD) error {
+func (m *MockDistributedQueueService_ConnectServer) SendHeader(arg0 metadata.MD) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SendHeader", arg0)
 	ret0, _ := ret[0].(error)
@@ -367,13 +524,13 @@ func (m *MockDistributedQueueService_SyncServer) SendHeader(arg0 metadata.MD) er
 }
 
 // SendHeader indicates an expected call of SendHeader.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).SendHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).SendHeader), arg0)
 }
 
 // SendMsg mocks base method.
-func (m_2 *MockDistributedQueueService_SyncServer) SendMsg(m interface{}) error {
+func (m_2 *MockDistributedQueueService_ConnectServer) SendMsg(m interface{}) error {
 	m_2.ctrl.T.Helper()
 	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
 	ret0, _ := ret[0].(error)
@@ -381,13 +538,13 @@ func (m_2 *MockDistributedQueueService_SyncServer) SendMsg(m interface{}) error 
 }
 
 // SendMsg indicates an expected call of SendMsg.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) SendMsg(m interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) SendMsg(m interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).SendMsg), m)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).SendMsg), m)
 }
 
 // SetHeader mocks base method.
-func (m *MockDistributedQueueService_SyncServer) SetHeader(arg0 metadata.MD) error {
+func (m *MockDistributedQueueService_ConnectServer) SetHeader(arg0 metadata.MD) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "SetHeader", arg0)
 	ret0, _ := ret[0].(error)
@@ -395,19 +552,138 @@ func (m *MockDistributedQueueService_SyncServer) SetHeader(arg0 metadata.MD) err
 }
 
 // SetHeader indicates an expected call of SetHeader.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).SetHeader), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).SetHeader), arg0)
 }
 
 // SetTrailer mocks base method.
-func (m *MockDistributedQueueService_SyncServer) SetTrailer(arg0 metadata.MD) {
+func (m *MockDistributedQueueService_ConnectServer) SetTrailer(arg0 metadata.MD) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "SetTrailer", arg0)
 }
 
 // SetTrailer indicates an expected call of SetTrailer.
-func (mr *MockDistributedQueueService_SyncServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
+func (mr *MockDistributedQueueService_ConnectServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockDistributedQueueService_SyncServer)(nil).SetTrailer), arg0)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockDistributedQueueService_ConnectServer)(nil).SetTrailer), arg0)
+}
+
+// MockDistributedQueueService_GetRangeServer is a mock of DistributedQueueService_GetRangeServer interface.
+type MockDistributedQueueService_GetRangeServer struct {
+	ctrl     *gomock.Controller
+	recorder *MockDistributedQueueService_GetRangeServerMockRecorder
+}
+
+// MockDistributedQueueService_GetRangeServerMockRecorder is the mock recorder for MockDistributedQueueService_GetRangeServer.
+type MockDistributedQueueService_GetRangeServerMockRecorder struct {
+	mock *MockDistributedQueueService_GetRangeServer
+}
+
+// NewMockDistributedQueueService_GetRangeServer creates a new mock instance.
+func NewMockDistributedQueueService_GetRangeServer(ctrl *gomock.Controller) *MockDistributedQueueService_GetRangeServer {
+	mock := &MockDistributedQueueService_GetRangeServer{ctrl: ctrl}
+	mock.recorder = &MockDistributedQueueService_GetRangeServerMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockDistributedQueueService_GetRangeServer) EXPECT() *MockDistributedQueueService_GetRangeServerMockRecorder {
+	return m.recorder
+}
+
+// Context mocks base method.
+func (m *MockDistributedQueueService_GetRangeServer) Context() context.Context {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Context")
+	ret0, _ := ret[0].(context.Context)
+	return ret0
+}
+
+// Context indicates an expected call of Context.
+func (mr *MockDistributedQueueService_GetRangeServerMockRecorder) Context() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Context", reflect.TypeOf((*MockDistributedQueueService_GetRangeServer)(nil).Context))
+}
+
+// RecvMsg mocks base method.
+func (m_2 *MockDistributedQueueService_GetRangeServer) RecvMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "RecvMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// RecvMsg indicates an expected call of RecvMsg.
+func (mr *MockDistributedQueueService_GetRangeServerMockRecorder) RecvMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "RecvMsg", reflect.TypeOf((*MockDistributedQueueService_GetRangeServer)(nil).RecvMsg), m)
+}
+
+// Send mocks base method.
+func (m *MockDistributedQueueService_GetRangeServer) Send(arg0 *distqueue.ServerQueueItem) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Send", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Send indicates an expected call of Send.
+func (mr *MockDistributedQueueService_GetRangeServerMockRecorder) Send(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Send", reflect.TypeOf((*MockDistributedQueueService_GetRangeServer)(nil).Send), arg0)
+}
+
+// SendHeader mocks base method.
+func (m *MockDistributedQueueService_GetRangeServer) SendHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SendHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendHeader indicates an expected call of SendHeader.
+func (mr *MockDistributedQueueService_GetRangeServerMockRecorder) SendHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendHeader", reflect.TypeOf((*MockDistributedQueueService_GetRangeServer)(nil).SendHeader), arg0)
+}
+
+// SendMsg mocks base method.
+func (m_2 *MockDistributedQueueService_GetRangeServer) SendMsg(m interface{}) error {
+	m_2.ctrl.T.Helper()
+	ret := m_2.ctrl.Call(m_2, "SendMsg", m)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SendMsg indicates an expected call of SendMsg.
+func (mr *MockDistributedQueueService_GetRangeServerMockRecorder) SendMsg(m interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SendMsg", reflect.TypeOf((*MockDistributedQueueService_GetRangeServer)(nil).SendMsg), m)
+}
+
+// SetHeader mocks base method.
+func (m *MockDistributedQueueService_GetRangeServer) SetHeader(arg0 metadata.MD) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetHeader", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetHeader indicates an expected call of SetHeader.
+func (mr *MockDistributedQueueService_GetRangeServerMockRecorder) SetHeader(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetHeader", reflect.TypeOf((*MockDistributedQueueService_GetRangeServer)(nil).SetHeader), arg0)
+}
+
+// SetTrailer mocks base method.
+func (m *MockDistributedQueueService_GetRangeServer) SetTrailer(arg0 metadata.MD) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetTrailer", arg0)
+}
+
+// SetTrailer indicates an expected call of SetTrailer.
+func (mr *MockDistributedQueueService_GetRangeServerMockRecorder) SetTrailer(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetTrailer", reflect.TypeOf((*MockDistributedQueueService_GetRangeServer)(nil).SetTrailer), arg0)
 }

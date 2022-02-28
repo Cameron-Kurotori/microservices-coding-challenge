@@ -19,9 +19,18 @@ message ServerQueueItem {
     google.protobuf.Timestamp ts = 3;
 }
 
+message GetRangeRequest {
+    google.protobuf.Timestamp start = 1;
+    google.protobuf.Timestamp end = 2;
+}
+
 service DistributedQueueService {
-    // Sync initializes a connection between the workers and leader. Workers stream items
+    // Connect initializes a connection between the workers and leader. Workers stream items
     // to the leader and the leader will determine the order of the items
-    // and send it to all connected workers.
-    rpc Sync(stream QueueItem) returns (stream ServerQueueItem);
+    // and send it to all connected workers. Workers will only receive messages inserted into
+    // the queue after Connect is called.
+    rpc Connect(stream QueueItem) returns (stream ServerQueueItem);
+
+    // GetRange returns a stream of (in order) items between the given time range.
+    rpc GetRange(GetRangeRequest) returns (stream ServerQueueItem);
 }

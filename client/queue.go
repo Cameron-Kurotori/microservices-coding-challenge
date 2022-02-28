@@ -12,7 +12,7 @@ import (
 )
 
 type Queue struct {
-	dq                  distqueue.DistributedQueueService_SyncClient
+	dq                  distqueue.DistributedQueueService_ConnectClient
 	queueChan           chan *anypb.Any
 	ctx                 context.Context
 	receiveHandlerChain []ReceiveHandler
@@ -65,7 +65,7 @@ func (q *Queue) receive() {
 }
 
 func new(dqClient distqueue.DistributedQueueServiceClient, opts ...QueueOpt) (*Queue, func(), error) {
-	dq, err := dqClient.Sync(context.Background())
+	dq, err := dqClient.Connect(context.Background())
 	if err != nil {
 		return nil, nil, err
 	}

@@ -18,10 +18,13 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type DistributedQueueServiceClient interface {
-	// Sync initializes a connection between the workers and leader. Workers stream items
+	// Connect initializes a connection between the workers and leader. Workers stream items
 	// to the leader and the leader will determine the order of the items
-	// and send it to all connected workers.
-	Sync(ctx context.Context, opts ...grpc.CallOption) (DistributedQueueService_SyncClient, error)
+	// and send it to all connected workers. Workers will only receive messages inserted into
+	// the queue after Connect is called.
+	Connect(ctx context.Context, opts ...grpc.CallOption) (DistributedQueueService_ConnectClient, error)
+	// GetRange returns a stream of (in order) items between the given time range.
+	GetRange(ctx context.Context, in *GetRangeRequest, opts ...grpc.CallOption) (DistributedQueueService_GetRangeClient, error)
 }
 
 type distributedQueueServiceClient struct {
@@ -32,30 +35,62 @@ func NewDistributedQueueServiceClient(cc grpc.ClientConnInterface) DistributedQu
 	return &distributedQueueServiceClient{cc}
 }
 
-func (c *distributedQueueServiceClient) Sync(ctx context.Context, opts ...grpc.CallOption) (DistributedQueueService_SyncClient, error) {
-	stream, err := c.cc.NewStream(ctx, &DistributedQueueService_ServiceDesc.Streams[0], "/distqueue.DistributedQueueService/Sync", opts...)
+func (c *distributedQueueServiceClient) Connect(ctx context.Context, opts ...grpc.CallOption) (DistributedQueueService_ConnectClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DistributedQueueService_ServiceDesc.Streams[0], "/distqueue.DistributedQueueService/Connect", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &distributedQueueServiceSyncClient{stream}
+	x := &distributedQueueServiceConnectClient{stream}
 	return x, nil
 }
 
-type DistributedQueueService_SyncClient interface {
+type DistributedQueueService_ConnectClient interface {
 	Send(*QueueItem) error
 	Recv() (*ServerQueueItem, error)
 	grpc.ClientStream
 }
 
-type distributedQueueServiceSyncClient struct {
+type distributedQueueServiceConnectClient struct {
 	grpc.ClientStream
 }
 
-func (x *distributedQueueServiceSyncClient) Send(m *QueueItem) error {
+func (x *distributedQueueServiceConnectClient) Send(m *QueueItem) error {
 	return x.ClientStream.SendMsg(m)
 }
 
-func (x *distributedQueueServiceSyncClient) Recv() (*ServerQueueItem, error) {
+func (x *distributedQueueServiceConnectClient) Recv() (*ServerQueueItem, error) {
+	m := new(ServerQueueItem)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *distributedQueueServiceClient) GetRange(ctx context.Context, in *GetRangeRequest, opts ...grpc.CallOption) (DistributedQueueService_GetRangeClient, error) {
+	stream, err := c.cc.NewStream(ctx, &DistributedQueueService_ServiceDesc.Streams[1], "/distqueue.DistributedQueueService/GetRange", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &distributedQueueServiceGetRangeClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type DistributedQueueService_GetRangeClient interface {
+	Recv() (*ServerQueueItem, error)
+	grpc.ClientStream
+}
+
+type distributedQueueServiceGetRangeClient struct {
+	grpc.ClientStream
+}
+
+func (x *distributedQueueServiceGetRangeClient) Recv() (*ServerQueueItem, error) {
 	m := new(ServerQueueItem)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
@@ -67,10 +102,13 @@ func (x *distributedQueueServiceSyncClient) Recv() (*ServerQueueItem, error) {
 // All implementations must embed UnimplementedDistributedQueueServiceServer
 // for forward compatibility
 type DistributedQueueServiceServer interface {
-	// Sync initializes a connection between the workers and leader. Workers stream items
+	// Connect initializes a connection between the workers and leader. Workers stream items
 	// to the leader and the leader will determine the order of the items
-	// and send it to all connected workers.
-	Sync(DistributedQueueService_SyncServer) error
+	// and send it to all connected workers. Workers will only receive messages inserted into
+	// the queue after Connect is called.
+	Connect(DistributedQueueService_ConnectServer) error
+	// GetRange returns a stream of (in order) items between the given time range.
+	GetRange(*GetRangeRequest, DistributedQueueService_GetRangeServer) error
 	mustEmbedUnimplementedDistributedQueueServiceServer()
 }
 
@@ -78,8 +116,11 @@ type DistributedQueueServiceServer interface {
 type UnimplementedDistributedQueueServiceServer struct {
 }
 
-func (UnimplementedDistributedQueueServiceServer) Sync(DistributedQueueService_SyncServer) error {
-	return status.Errorf(codes.Unimplemented, "method Sync not implemented")
+func (UnimplementedDistributedQueueServiceServer) Connect(DistributedQueueService_ConnectServer) error {
+	return status.Errorf(codes.Unimplemented, "method Connect not implemented")
+}
+func (UnimplementedDistributedQueueServiceServer) GetRange(*GetRangeRequest, DistributedQueueService_GetRangeServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetRange not implemented")
 }
 func (UnimplementedDistributedQueueServiceServer) mustEmbedUnimplementedDistributedQueueServiceServer() {
 }
@@ -95,30 +136,51 @@ func RegisterDistributedQueueServiceServer(s grpc.ServiceRegistrar, srv Distribu
 	s.RegisterService(&DistributedQueueService_ServiceDesc, srv)
 }
 
-func _DistributedQueueService_Sync_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DistributedQueueServiceServer).Sync(&distributedQueueServiceSyncServer{stream})
+func _DistributedQueueService_Connect_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(DistributedQueueServiceServer).Connect(&distributedQueueServiceConnectServer{stream})
 }
 
-type DistributedQueueService_SyncServer interface {
+type DistributedQueueService_ConnectServer interface {
 	Send(*ServerQueueItem) error
 	Recv() (*QueueItem, error)
 	grpc.ServerStream
 }
 
-type distributedQueueServiceSyncServer struct {
+type distributedQueueServiceConnectServer struct {
 	grpc.ServerStream
 }
 
-func (x *distributedQueueServiceSyncServer) Send(m *ServerQueueItem) error {
+func (x *distributedQueueServiceConnectServer) Send(m *ServerQueueItem) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func (x *distributedQueueServiceSyncServer) Recv() (*QueueItem, error) {
+func (x *distributedQueueServiceConnectServer) Recv() (*QueueItem, error) {
 	m := new(QueueItem)
 	if err := x.ServerStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
+}
+
+func _DistributedQueueService_GetRange_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetRangeRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(DistributedQueueServiceServer).GetRange(m, &distributedQueueServiceGetRangeServer{stream})
+}
+
+type DistributedQueueService_GetRangeServer interface {
+	Send(*ServerQueueItem) error
+	grpc.ServerStream
+}
+
+type distributedQueueServiceGetRangeServer struct {
+	grpc.ServerStream
+}
+
+func (x *distributedQueueServiceGetRangeServer) Send(m *ServerQueueItem) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // DistributedQueueService_ServiceDesc is the grpc.ServiceDesc for DistributedQueueService service.
@@ -130,10 +192,15 @@ var DistributedQueueService_ServiceDesc = grpc.ServiceDesc{
 	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "Sync",
-			Handler:       _DistributedQueueService_Sync_Handler,
+			StreamName:    "Connect",
+			Handler:       _DistributedQueueService_Connect_Handler,
 			ServerStreams: true,
 			ClientStreams: true,
+		},
+		{
+			StreamName:    "GetRange",
+			Handler:       _DistributedQueueService_GetRange_Handler,
+			ServerStreams: true,
 		},
 	},
 	Metadata: "distqueue.proto",

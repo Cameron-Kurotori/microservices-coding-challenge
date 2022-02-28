@@ -57,7 +57,7 @@ func (server *distQueueServer) Stats() stats {
 	}
 }
 
-func (server *distQueueServer) Sync(stream distqueue.DistributedQueueService_SyncServer) error {
+func (server *distQueueServer) Sync(stream distqueue.DistributedQueueService_ConnectServer) error {
 	clientID := uuid.New().String()
 
 	ctx, cancelCtx := context.WithCancel(context.Background())

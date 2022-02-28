@@ -21,12 +21,12 @@ func TestNew(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	dqClient := mock_distqueue.NewMockDistributedQueueServiceClient(ctrl)
-	syncClient := mock_distqueue.NewMockDistributedQueueService_SyncClient(ctrl)
-	syncClient.EXPECT().Send(gomock.Any()).AnyTimes().Return(nil)
-	syncClient.EXPECT().Recv().AnyTimes().Return(nil, io.EOF)
-	syncClient.EXPECT().CloseSend().Return(nil)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
+	connectClient.EXPECT().Send(gomock.Any()).AnyTimes().Return(nil)
+	connectClient.EXPECT().Recv().AnyTimes().Return(nil, io.EOF)
+	connectClient.EXPECT().CloseSend().Return(nil)
 
-	dqClient.EXPECT().Sync(gomock.Any()).AnyTimes().Return(syncClient, nil)
+	dqClient.EXPECT().Connect(gomock.Any()).AnyTimes().Return(connectClient, nil)
 
 	_, cancel, err := new(dqClient)
 	if err != nil {
@@ -41,7 +41,7 @@ func TestNew_SyncFail(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	dqClient := mock_distqueue.NewMockDistributedQueueServiceClient(ctrl)
-	dqClient.EXPECT().Sync(gomock.Any()).AnyTimes().Return(nil, fmt.Errorf("failed to create sync client"))
+	dqClient.EXPECT().Connect(gomock.Any()).AnyTimes().Return(nil, fmt.Errorf("failed to create sync client"))
 
 	_, _, err := new(dqClient)
 	if err == nil {
@@ -51,11 +51,11 @@ func TestNew_SyncFail(t *testing.T) {
 
 func TestReceive_CtxCancelled(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	syncClient := mock_distqueue.NewMockDistributedQueueService_SyncClient(ctrl)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	q := &Queue{
-		dq:        syncClient,
+		dq:        connectClient,
 		queueChan: make(chan *anypb.Any, 1),
 		ctx:       ctx,
 	}
@@ -73,18 +73,18 @@ func TestReceive_CtxCancelled(t *testing.T) {
 
 func TestReceive_EOF(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	syncClient := mock_distqueue.NewMockDistributedQueueService_SyncClient(ctrl)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 
-	syncClient.EXPECT().Recv().DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
+	connectClient.EXPECT().Recv().DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
 		cancel()
 		return nil, io.EOF
 	})
 
 	q := &Queue{
-		dq:        syncClient,
+		dq:        connectClient,
 		queueChan: make(chan *anypb.Any, 1),
 		ctx:       ctx,
 	}
@@ -101,15 +101,15 @@ func TestReceive_EOF(t *testing.T) {
 
 func TestReceive_Error(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	syncClient := mock_distqueue.NewMockDistributedQueueService_SyncClient(ctrl)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
 
 	ctx := context.Background()
-	syncClient.EXPECT().Recv().DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
+	connectClient.EXPECT().Recv().DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
 		return nil, fmt.Errorf("receive error")
 	})
 
 	q := &Queue{
-		dq:        syncClient,
+		dq:        connectClient,
 		queueChan: make(chan *anypb.Any, 1),
 		ctx:       ctx,
 	}
@@ -126,7 +126,7 @@ func TestReceive_Error(t *testing.T) {
 
 func TestReceive_ReceiveOne(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	syncClient := mock_distqueue.NewMockDistributedQueueService_SyncClient(ctrl)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
@@ -153,10 +153,10 @@ func TestReceive_ReceiveOne(t *testing.T) {
 		return ret, nil
 	}
 
-	syncClient.EXPECT().Recv().MinTimes(2).DoAndReturn(receiveFn)
+	connectClient.EXPECT().Recv().MinTimes(2).DoAndReturn(receiveFn)
 
 	q := &Queue{
-		dq:        syncClient,
+		dq:        connectClient,
 		queueChan: make(chan *anypb.Any, 1),
 		ctx:       ctx,
 	}
@@ -191,10 +191,10 @@ func TestReceive_ReceiveOne(t *testing.T) {
 }
 func TestPushPop(t *testing.T) {
 	ctrl := gomock.NewController(t)
-	syncClient := mock_distqueue.NewMockDistributedQueueService_SyncClient(ctrl)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
 	var lastItemTS *timestamppb.Timestamp
 	itemChan := make(chan *distqueue.ServerQueueItem, 10)
-	syncClient.EXPECT().Send(gomock.Any()).Times(1).DoAndReturn(func(item *distqueue.QueueItem) error {
+	connectClient.EXPECT().Send(gomock.Any()).Times(1).DoAndReturn(func(item *distqueue.QueueItem) error {
 		now := timestamppb.Now()
 		itemChan <- &distqueue.ServerQueueItem{
 			Item:   item,
@@ -206,7 +206,7 @@ func TestPushPop(t *testing.T) {
 	})
 
 	itemReceived := make(chan bool, 1)
-	syncClient.EXPECT().Recv().MinTimes(1).DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
+	connectClient.EXPECT().Recv().MinTimes(1).DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
 		select {
 		case item := <-itemChan:
 			close(itemReceived)
@@ -218,7 +218,7 @@ func TestPushPop(t *testing.T) {
 
 	ctx := context.Background()
 	q := &Queue{
-		dq:        syncClient,
+		dq:        connectClient,
 		queueChan: make(chan *anypb.Any),
 		ctx:       ctx,
 	}

@@ -232,21 +232,21 @@ func TestSync_SendErr(t *testing.T) {
 	receiving := sync.WaitGroup{}
 	receiving.Add(1)
 
-	syncServer := mock_distqueue.NewMockDistributedQueueService_SyncServer(ctrl)
-	syncServer.EXPECT().Recv().AnyTimes().DoAndReturn(func() (*distqueue.QueueItem, error) {
+	connectServer := mock_distqueue.NewMockDistributedQueueService_ConnectServer(ctrl)
+	connectServer.EXPECT().Recv().AnyTimes().DoAndReturn(func() (*distqueue.QueueItem, error) {
 		firstReceive.Do(receiving.Done)
 		resp := <-responses
 		return resp.val, resp.err
 	})
 
-	syncServer.EXPECT().Send(gomock.Any()).AnyTimes().DoAndReturn(func(item *distqueue.ServerQueueItem) error {
+	connectServer.EXPECT().Send(gomock.Any()).AnyTimes().DoAndReturn(func(item *distqueue.ServerQueueItem) error {
 		return <-sendErrors
 	})
 
 	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
-		err := server.Sync(syncServer)
+		err := server.Connect(connectServer)
 		if err != nil {
 			errChan <- err
 		}
@@ -277,8 +277,8 @@ func TestSync_ReceiveErr(t *testing.T) {
 	receiving := sync.WaitGroup{}
 	receiving.Add(1)
 
-	syncServer := mock_distqueue.NewMockDistributedQueueService_SyncServer(ctrl)
-	syncServer.EXPECT().Recv().AnyTimes().DoAndReturn(func() (*distqueue.QueueItem, error) {
+	connectServer := mock_distqueue.NewMockDistributedQueueService_ConnectServer(ctrl)
+	connectServer.EXPECT().Recv().AnyTimes().DoAndReturn(func() (*distqueue.QueueItem, error) {
 		receiving.Done()
 		resp := <-responses
 		return resp.val, resp.err
@@ -287,7 +287,7 @@ func TestSync_ReceiveErr(t *testing.T) {
 	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
-		err := server.Sync(syncServer)
+		err := server.Connect(connectServer)
 		if err != nil {
 			errChan <- err
 		}
@@ -317,8 +317,8 @@ func TestSyncAndStats(t *testing.T) {
 	receiving := sync.WaitGroup{}
 	receiving.Add(1)
 
-	syncServer := mock_distqueue.NewMockDistributedQueueService_SyncServer(ctrl)
-	syncServer.EXPECT().Recv().AnyTimes().DoAndReturn(func() (*distqueue.QueueItem, error) {
+	connectServer := mock_distqueue.NewMockDistributedQueueService_ConnectServer(ctrl)
+	connectServer.EXPECT().Recv().AnyTimes().DoAndReturn(func() (*distqueue.QueueItem, error) {
 		receiving.Done()
 		resp := <-responses
 		return resp.val, resp.err
@@ -327,7 +327,7 @@ func TestSyncAndStats(t *testing.T) {
 	errChan := make(chan error, 1)
 	go func() {
 		defer close(errChan)
-		err := server.Sync(syncServer)
+		err := server.Connect(connectServer)
 		if err != nil {
 			errChan <- err
 		}

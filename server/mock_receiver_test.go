@@ -141,7 +141,7 @@ func (mr *MockServerMockRecorder) Stats() *gomock.Call {
 }
 
 // Sync mocks base method.
-func (m *MockServer) Sync(arg0 distqueue.DistributedQueueService_SyncServer) error {
+func (m *MockServer) Sync(arg0 distqueue.DistributedQueueService_ConnectServer) error {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "Sync", arg0)
 	ret0, _ := ret[0].(error)
