@@ -41,92 +41,80 @@ func setupServer(t *testing.T) server.Server {
 	return dqServer
 }
 
-// TestIntegration sets up a server and 3 clients
-// Tests pushing and popping on the 3 clients.
-// All clients are setup at start (before any pushes)
-// so at end of process all should have identical queues to pop from.
-func TestIntegration(t *testing.T) {
-	dqServer := setupServer(t)
-	numClients := 3
-	clientWait := sync.WaitGroup{}
-	clientWait.Add(numClients)
+type testClient struct {
+	*client.Queue
+	done func()
+	id   string
+}
 
-	cancelWait := sync.WaitGroup{}
-	cancelWait.Add(numClients)
-
-	type testClient struct {
-		*client.Queue
-		cancel func()
-	}
-
+// numClients - number of clients to setup
+// clientWait - function to call immediately when the client is finished
+// clientCancelled - function to call after client has been cancelled
+func setupClients(t *testing.T, numClients int, clientFinished func(), clientCancelled func()) []testClient {
 	clients := []testClient{}
 
 	// setup all the clients first for this test
 	for i := 0; i < numClients; i++ {
 		t.Logf("setting up client: %d", i)
-		c, clientCancel, err := client.New(addr)
+		c, clientCancel, err := client.New(addr, client.WithReceiveHandler(client.MonitorMissing()))
 		if err != nil {
 			panic(err)
 		}
 		clients = append(clients, testClient{
+			id:    fmt.Sprintf("client-%d", i),
 			Queue: c,
-			cancel: func() {
-				clientWait.Done()
+			done: func() {
+				clientFinished()
 				t.Log("Cancelling client")
 				clientCancel()
 				time.Sleep(time.Second * 1) // give enough time for client to actually cancel
-				cancelWait.Done()
+				clientCancelled()
 			},
 		})
 	}
+	return clients
+}
 
-	allItems := make(chan []*item.Item, numClients)
-	numToAdd := 3 // number of items to add per client
-
-	for i, c := range clients {
-		go func(i int, c testClient) {
-			// once this flow is done, the client is finished
-			defer c.cancel()
-
-			// push items
-			for j := 0; j < numToAdd; j++ {
-				id := fmt.Sprintf("client-%d,item-%d", i, j)
-				queueItem, _ := anypb.New(&item.Item{
-					Id: id,
-				})
-				err := c.Push(queueItem)
-				if err != nil {
-					panic(err)
-				}
-			}
-
-			items := []*item.Item{}
-			// pop from the queue client until we have the expected number of items
-			for {
-				queueItem := c.Pop()
-				if queueItem == nil {
-					continue
-				}
-
-				t.Log("item popped")
-
-				unmarshalled := &item.Item{}
-				_ = queueItem.UnmarshalTo(unmarshalled)
-				items = append(items, unmarshalled)
-				if len(items) >= numToAdd*numClients {
-					break
-				}
-			}
-
-			assert.Len(t, items, numToAdd*numClients)
-			allItems <- items
-			t.Logf("client=%d items=%v", i, items)
-		}(i, c)
+// totalNumClients - number of clients in total
+// numToPush - number of items to push to leader queue
+// testClient - the test client to test with
+func runClient(t *testing.T, totalNumClients int, numToPush int, testClient testClient) []*item.Item {
+	// push items
+	for itemIndex := 0; itemIndex < numToPush; itemIndex++ {
+		id := fmt.Sprintf("%s-item-%d", testClient.id, itemIndex)
+		queueItem, _ := anypb.New(&item.Item{
+			Id: id,
+		})
+		err := testClient.Push(queueItem)
+		if err != nil {
+			panic(err)
+		}
 	}
 
-	clientWait.Wait()
-	close(allItems)
+	items := []*item.Item{}
+	// pop from the queue client until we have the expected number of items
+	for {
+		queueItem := testClient.Pop()
+		if queueItem == nil {
+			continue
+		}
 
+		t.Log("item popped")
+
+		unmarshalled := &item.Item{}
+		_ = queueItem.UnmarshalTo(unmarshalled)
+		items = append(items, unmarshalled)
+		if len(items) >= numToPush*totalNumClients {
+			break
+		}
+	}
+
+	assert.Len(t, items, numToPush*totalNumClients)
+	return items
+}
+
+// assertIdenticalItems asserts that all the list of items in the channel are exactly the same
+func assertIdenticalItems(t *testing.T, allItems chan []*item.Item) {
 	// check to make sure all queue clients have identical order
 	var first []*item.Item
 	for items := range allItems {
@@ -138,6 +126,37 @@ func TestIntegration(t *testing.T) {
 			assert.Equal(t, first[i], item)
 		}
 	}
+}
+
+// TestIntegration sets up a server and 3 clients
+// Tests pushing and popping on the 3 clients.
+// All clients are setup at start (before any pushes)
+// so at end of process all should have identical queues to pop from.
+func TestIntegration(t *testing.T) {
+	dqServer := setupServer(t)
+	numClients := 3
+
+	// sync magic for making sure all parts run as intended
+	clientWait := sync.WaitGroup{}
+	clientWait.Add(numClients)
+	cancelWait := sync.WaitGroup{}
+	cancelWait.Add(numClients)
+
+	clients := setupClients(t, numClients, clientWait.Done, cancelWait.Done)
+	allItems := make(chan []*item.Item, numClients)
+	for _, c := range clients {
+		go func(c testClient) {
+			defer c.done()
+			items := runClient(t, numClients, 3, c)
+			allItems <- items
+			t.Logf("%s: items=%v", c.id, items)
+		}(c)
+	}
+
+	clientWait.Wait()
+	close(allItems)
+
+	assertIdenticalItems(t, allItems)
 
 	cancelDone := make(chan bool)
 	go func() {
