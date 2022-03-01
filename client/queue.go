@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"time"
 
 	"github.com/Cameron-Kurotori/microservices-coding-challenge/grpc"
 	"github.com/Cameron-Kurotori/microservices-coding-challenge/proto/distqueue"
 	"google.golang.org/protobuf/types/known/anypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 type Queue struct {
@@ -18,6 +20,12 @@ type Queue struct {
 	receiveHandlerChain []ReceiveHandler
 	Done                func()
 	ReceiveErrors       chan error
+	warmStart           struct {
+		enabled bool
+		after   *time.Time
+		items   chan *distqueue.ServerQueueItem
+		err     error
+	}
 }
 
 // Push an item to the distributed queue
@@ -38,16 +46,51 @@ func (q *Queue) Pop() *anypb.Any {
 	}
 }
 
+func (q *Queue) processReceive(item *distqueue.ServerQueueItem, err error) error {
+	for _, handler := range q.receiveHandlerChain {
+		item, err = handler(item, err)
+	}
+	if err != nil {
+		return err
+	}
+
+	if item != nil && item.Item != nil {
+		q.queueChan <- item.Item.Item
+	} else {
+		fmt.Fprintf(os.Stderr, "item empty: skipping\n")
+	}
+	return nil
+}
+
 func (q *Queue) receive() error {
+	var lastTS *time.Time
+	if q.warmStart.items != nil {
+		if q.warmStart.err != nil {
+			return q.warmStart.err
+		}
+		for warmItem := range q.warmStart.items {
+			err := q.processReceive(warmItem, nil)
+			if err != nil {
+				return err
+			}
+			ts := warmItem.Ts.AsTime()
+			lastTS = &ts
+		}
+	}
 	for {
 		select {
 		case <-q.ctx.Done():
 			return nil
 		default:
 			item, err := q.dq.Recv()
-			for _, handler := range q.receiveHandlerChain {
-				item, err = handler(item, err)
+			if lastTS != nil && err == nil {
+				// skip received messages that are duplicate (ts is unique and in order)
+				if !item.Ts.AsTime().After(*lastTS) {
+					continue
+				}
+				lastTS = nil
 			}
+			err = q.processReceive(item, err)
 			if err != nil {
 				if err == io.EOF {
 					return nil
@@ -55,13 +98,41 @@ func (q *Queue) receive() error {
 				return err
 			}
 
-			if item != nil && item.Item != nil {
-				q.queueChan <- item.Item.Item
-			} else {
-				fmt.Fprintf(os.Stderr, "item empty: skipping\n")
-			}
 		}
 	}
+}
+
+func (q *Queue) doWarmStart(dqClient distqueue.DistributedQueueServiceClient) error {
+	if !q.warmStart.enabled {
+		return nil
+	}
+
+	req := &distqueue.GetRangeRequest{}
+	if q.warmStart.after != nil {
+		req.After = timestamppb.New(*q.warmStart.after)
+	}
+	stream, err := dqClient.GetRange(context.Background(), req)
+	if err != nil {
+		return err
+	}
+
+	q.warmStart.items = make(chan *distqueue.ServerQueueItem, 10)
+
+	go func() {
+		defer close(q.warmStart.items)
+		for {
+			item, err := stream.Recv()
+			if err != nil {
+				if err != io.EOF {
+					q.warmStart.err = err
+				}
+				return
+			}
+			q.warmStart.items <- item
+		}
+	}()
+
+	return nil
 }
 
 func new(dqClient distqueue.DistributedQueueServiceClient, opts ...QueueOpt) (*Queue, error) {
@@ -70,7 +141,6 @@ func new(dqClient distqueue.DistributedQueueServiceClient, opts ...QueueOpt) (*Q
 		return nil, err
 	}
 	queueChan := make(chan *anypb.Any, 5)
-	receiveErrChan := make(chan error, 1)
 	ctx, cancelCtx := context.WithCancel(context.Background())
 	cancel := func() {
 		_ = dq.CloseSend()
@@ -80,17 +150,23 @@ func new(dqClient distqueue.DistributedQueueServiceClient, opts ...QueueOpt) (*Q
 	}
 
 	q := &Queue{
-		dq:            dq,
-		queueChan:     queueChan,
-		ctx:           ctx,
-		Done:          cancel,
-		ReceiveErrors: receiveErrChan,
+		dq:        dq,
+		queueChan: queueChan,
+		ctx:       ctx,
+		Done:      cancel,
 	}
 
 	for _, opt := range opts {
 		opt(q)
 	}
+	err = q.doWarmStart(dqClient)
+	if err != nil {
+		cancel()
+		return nil, err
+	}
 
+	receiveErrChan := make(chan error, 1)
+	q.ReceiveErrors = receiveErrChan
 	// receive messages from the server
 	go func() {
 		err := q.receive()

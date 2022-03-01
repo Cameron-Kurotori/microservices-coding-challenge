@@ -10,6 +10,13 @@ import (
 
 type QueueOpt func(q *Queue)
 
+func WarmStart(after *time.Time) QueueOpt {
+	return func(q *Queue) {
+		q.warmStart.enabled = true
+		q.warmStart.after = after
+	}
+}
+
 // WithReceiveHandler uses the handler chain to link behavior when the queue
 // receives the next item from the server.
 // Example Use Case: This can be used for notifying a worker that a new item has
