@@ -1,0 +1,4 @@
+FROM distqueue-cli
+
+EXPOSE 2345
+CMD ["distqueue", "client", "--target=0.0.0.0:6789"]

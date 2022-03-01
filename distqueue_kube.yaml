@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: distqueue-server
+  labels:
+    app: distqueue-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: distqueue-server
+  template:
+    metadata:
+      labels:
+        app: distqueue-server
+    spec:
+      containers:
+      - name: distqueue-server
+        image: localhost/distqueue-server:latest
+        command: ["distqueue", "server"]
+        ports:
+        - containerPort: 6789
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: distqueue-client
+  labels:
+    app: distqueue-client
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: distqueue-client
+  template:
+    metadata:
+      labels:
+        app: distqueue-client
+    spec:
+      containers:
+      - name: distqueue-client
+        image: localhost/distqueue-client:latest
+        command: ["distqueue", "client", "--target=distqueue-server:80"]
+        ports:
+        - containerPort: 2345
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: distqueue-server
+spec:
+  selector:
+    app: distqueue-server
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 6789
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: distqueue-client
+spec:
+  type: LoadBalancer
+  selector:
+    app: distqueue-client
+  ports:
+  - protocol: TCP
+    port: 2345
+    targetPort: 2345

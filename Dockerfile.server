@@ -1,0 +1,4 @@
+FROM distqueue-cli
+
+EXPOSE 6789
+CMD ["distqueue", "server"]
