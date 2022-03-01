@@ -28,13 +28,13 @@ func TestNew(t *testing.T) {
 
 	dqClient.EXPECT().Connect(gomock.Any()).AnyTimes().Return(connectClient, nil)
 
-	_, cancel, err := new(dqClient)
+	q, err := new(dqClient)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(100 * time.Millisecond)
-	cancel()
+	q.Done()
 }
 
 func TestNew_SyncFail(t *testing.T) {
@@ -43,10 +43,51 @@ func TestNew_SyncFail(t *testing.T) {
 	dqClient := mock_distqueue.NewMockDistributedQueueServiceClient(ctrl)
 	dqClient.EXPECT().Connect(gomock.Any()).AnyTimes().Return(nil, fmt.Errorf("failed to create sync client"))
 
-	_, _, err := new(dqClient)
+	_, err := new(dqClient)
 	if err == nil {
 		t.Fatal("expected error, got none")
 	}
+}
+
+func TestNew_ReceiveErr(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	dqClient := mock_distqueue.NewMockDistributedQueueServiceClient(ctrl)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
+	expectedErr := fmt.Errorf("expected err")
+	connectClient.EXPECT().Recv().AnyTimes().Return(nil, expectedErr)
+	connectClient.EXPECT().CloseSend().Return(nil)
+
+	dqClient.EXPECT().Connect(gomock.Any()).AnyTimes().Return(connectClient, nil)
+
+	q, err := new(dqClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = <-q.ReceiveErrors
+	assert.Equal(t, expectedErr, err)
+	q.Done()
+}
+
+func TestNew_ReceiveEOF(t *testing.T) {
+	ctrl := gomock.NewController(t)
+
+	dqClient := mock_distqueue.NewMockDistributedQueueServiceClient(ctrl)
+	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
+	connectClient.EXPECT().Recv().AnyTimes().Return(nil, io.EOF)
+	connectClient.EXPECT().CloseSend().Return(nil)
+
+	dqClient.EXPECT().Connect(gomock.Any()).AnyTimes().Return(connectClient, nil)
+
+	q, err := new(dqClient)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = <-q.ReceiveErrors
+	assert.Nil(t, err)
+	q.Done()
 }
 
 func TestReceive_CtxCancelled(t *testing.T) {
@@ -61,14 +102,8 @@ func TestReceive_CtxCancelled(t *testing.T) {
 	}
 
 	cancel()
-	q.receive()
-
-	select {
-	case _, ok := <-q.queueChan:
-		assert.False(t, ok)
-	default:
-		t.Fatal("expected queueChan to be closed")
-	}
+	err := q.receive()
+	assert.Nil(t, err)
 }
 
 func TestReceive_EOF(t *testing.T) {
@@ -89,14 +124,8 @@ func TestReceive_EOF(t *testing.T) {
 		ctx:       ctx,
 	}
 
-	q.receive()
-
-	select {
-	case _, ok := <-q.queueChan:
-		assert.False(t, ok)
-	default:
-		t.Fatal("expected queueChan to be closed")
-	}
+	err := q.receive()
+	assert.Nil(t, err)
 }
 
 func TestReceive_Error(t *testing.T) {
@@ -104,24 +133,19 @@ func TestReceive_Error(t *testing.T) {
 	connectClient := mock_distqueue.NewMockDistributedQueueService_ConnectClient(ctrl)
 
 	ctx := context.Background()
-	connectClient.EXPECT().Recv().DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
-		return nil, fmt.Errorf("receive error")
-	})
+	expectedErr := fmt.Errorf("receive error")
 
+	connectClient.EXPECT().Recv().DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
+		return nil, expectedErr
+	})
 	q := &Queue{
 		dq:        connectClient,
 		queueChan: make(chan *anypb.Any, 1),
 		ctx:       ctx,
 	}
 
-	q.receive()
-	time.Sleep(time.Millisecond * 50)
-
-	select {
-	case <-q.queueChan:
-		t.Fatal("expected no item in queue and not closed")
-	default:
-	}
+	err := q.receive()
+	assert.Equal(t, expectedErr, err)
 }
 
 func TestReceive_ReceiveOne(t *testing.T) {
@@ -179,15 +203,6 @@ func TestReceive_ReceiveOne(t *testing.T) {
 	}
 
 	cancel()
-	// make sure we hit the next loop of the receive for loop to close channel
-	time.Sleep(time.Millisecond * 50)
-
-	select {
-	case _, ok := <-q.queueChan:
-		assert.False(t, ok)
-	default:
-		t.Fatal("expected queue to be closed")
-	}
 }
 func TestPushPop(t *testing.T) {
 	ctrl := gomock.NewController(t)

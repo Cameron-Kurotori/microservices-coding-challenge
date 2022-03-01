@@ -101,11 +101,11 @@ func TestFollowerSend_Error(t *testing.T) {
 
 func TestNew(t *testing.T) {
 	server := New()
-	assert.NotNil(t, server.(*distQueueServer).clients)
+	assert.NotNil(t, server.(*backwardsCompatibleServer).dqServer.clients)
 }
 
 func TestReceive_EOF(t *testing.T) {
-	server := New().(*distQueueServer)
+	server := New().(*backwardsCompatibleServer).dqServer
 	ctrl := gomock.NewController(t)
 	mockReceiver := NewMockQueueReceiver(ctrl)
 
@@ -117,7 +117,7 @@ func TestReceive_EOF(t *testing.T) {
 }
 
 func TestReceive_Error(t *testing.T) {
-	server := New().(*distQueueServer)
+	server := New().(*backwardsCompatibleServer).dqServer
 	ctrl := gomock.NewController(t)
 	mockReceiver := NewMockQueueReceiver(ctrl)
 
@@ -130,7 +130,7 @@ func TestReceive_Error(t *testing.T) {
 }
 
 func TestReceive_ClientDoneAfter3(t *testing.T) {
-	server := New().(*distQueueServer)
+	server := New().(*backwardsCompatibleServer).dqServer
 	ctrl := gomock.NewController(t)
 	mockReceiver := NewMockQueueReceiver(ctrl)
 
@@ -181,7 +181,7 @@ func TestReceive_ClientDoneAfter3(t *testing.T) {
 }
 
 func TestPush(t *testing.T) {
-	server := New().(*distQueueServer)
+	server := New().(*backwardsCompatibleServer).dqServer
 
 	for i := 0; i < 3; i++ {
 		server.clients[fmt.Sprintf("client-%d", i)] = &follower{
@@ -350,4 +350,156 @@ func TestSyncAndStats(t *testing.T) {
 	}
 
 	assert.Equal(t, 0, server.Stats().NumberClients)
+}
+
+func TestGetRange_After(t *testing.T) {
+	server := New().(*backwardsCompatibleServer)
+	now := time.Now()
+	for i := 0; i < 100; i++ {
+		server.dqServer.data = append(server.dqServer.data, &distqueue.ServerQueueItem{
+			Ts: timestamppb.New(now.Add(time.Duration(i))),
+		})
+	}
+
+	ctrl := gomock.NewController(t)
+	stream := mock_distqueue.NewMockDistributedQueueService_GetRangeServer(ctrl)
+
+	count := 0
+	stream.EXPECT().Send(gomock.Any()).Times(99).DoAndReturn(func(item *distqueue.ServerQueueItem) error {
+		count++
+		assert.Greater(t, item.Ts.AsTime().UnixNano(), now.UnixNano())
+		return nil
+	})
+
+	err := server.GetRange(&distqueue.GetRangeRequest{After: timestamppb.New(now)}, stream)
+	assert.Nil(t, err)
+	t.Logf("count=%d", count)
+}
+
+func TestGetRange_Before(t *testing.T) {
+	server := New().(*backwardsCompatibleServer)
+	now := time.Now()
+	for i := 0; i < 100; i++ {
+		server.dqServer.data = append(server.dqServer.data, &distqueue.ServerQueueItem{
+			Ts: timestamppb.New(now.Add(time.Duration(i))),
+		})
+	}
+
+	ctrl := gomock.NewController(t)
+	stream := mock_distqueue.NewMockDistributedQueueService_GetRangeServer(ctrl)
+
+	count := 0
+	stream.EXPECT().Send(gomock.Any()).Times(99).DoAndReturn(func(item *distqueue.ServerQueueItem) error {
+		count++
+		assert.Less(t, item.Ts.AsTime().UnixNano(), now.Add(time.Duration(99)).UnixNano())
+		return nil
+	})
+
+	err := server.GetRange(&distqueue.GetRangeRequest{Before: timestamppb.New(now.Add(time.Duration(99)))}, stream)
+	assert.Nil(t, err)
+	t.Logf("count=%d", count)
+}
+
+func TestGetRange_BeforeAfter(t *testing.T) {
+	server := New().(*backwardsCompatibleServer)
+	now := time.Now()
+	for i := 0; i < 100; i++ {
+		server.dqServer.data = append(server.dqServer.data, &distqueue.ServerQueueItem{
+			Ts: timestamppb.New(now.Add(time.Duration(i))),
+		})
+	}
+
+	ctrl := gomock.NewController(t)
+	stream := mock_distqueue.NewMockDistributedQueueService_GetRangeServer(ctrl)
+
+	count := 0
+	stream.EXPECT().Send(gomock.Any()).Times(1).DoAndReturn(func(item *distqueue.ServerQueueItem) error {
+		count++
+		assert.Less(t, item.Ts.AsTime().UnixNano(), now.Add(time.Duration(51)).UnixNano())
+		assert.Greater(t, item.Ts.AsTime().UnixNano(), now.Add(time.Duration(49)).UnixNano())
+		return nil
+	})
+
+	err := server.GetRange(&distqueue.GetRangeRequest{
+		After:  timestamppb.New(now.Add(time.Duration(49))),
+		Before: timestamppb.New(now.Add(time.Duration(51))),
+	}, stream)
+	assert.Nil(t, err)
+	t.Logf("count=%d", count)
+}
+
+func TestGetRange_OutOfRange(t *testing.T) {
+	server := New().(*backwardsCompatibleServer)
+	now := time.Now()
+	for i := 0; i < 100; i++ {
+		server.dqServer.data = append(server.dqServer.data, &distqueue.ServerQueueItem{
+			Ts: timestamppb.New(now.Add(time.Duration(i))),
+		})
+	}
+
+	ctrl := gomock.NewController(t)
+	stream := mock_distqueue.NewMockDistributedQueueService_GetRangeServer(ctrl)
+
+	err := server.GetRange(&distqueue.GetRangeRequest{
+		Before: timestamppb.New(now.Add(-time.Duration(1))),
+	}, stream)
+	assert.Nil(t, err)
+
+	err = server.GetRange(&distqueue.GetRangeRequest{
+		After: timestamppb.New(now.Add(time.Duration(100))),
+	}, stream)
+	assert.Nil(t, err)
+}
+
+func TestGetRange_InvalidInput(t *testing.T) {
+	server := New().(*backwardsCompatibleServer)
+	now := time.Now()
+	for i := 0; i < 100; i++ {
+		server.dqServer.data = append(server.dqServer.data, &distqueue.ServerQueueItem{
+			Ts: timestamppb.New(now.Add(time.Duration(i))),
+		})
+	}
+
+	ctrl := gomock.NewController(t)
+	stream := mock_distqueue.NewMockDistributedQueueService_GetRangeServer(ctrl)
+
+	err := server.GetRange(&distqueue.GetRangeRequest{
+		After:  timestamppb.New(now.Add(time.Duration(51))),
+		Before: timestamppb.New(now.Add(time.Duration(49))),
+	}, stream)
+	if err == nil {
+		t.Fatal("expected error got none")
+	}
+
+	t.Logf("got error as expected: %+v", err)
+
+	statusErr := status.Convert(err)
+	if statusErr == nil {
+		t.Fatalf("expected status error: %v", err)
+	}
+
+	assert.Equal(t, codes.InvalidArgument, statusErr.Code())
+}
+
+func TestGetRange_SendErr(t *testing.T) {
+	server := New().(*backwardsCompatibleServer)
+	now := time.Now()
+	for i := 0; i < 100; i++ {
+		server.dqServer.data = append(server.dqServer.data, &distqueue.ServerQueueItem{
+			Ts: timestamppb.New(now.Add(time.Duration(i))),
+		})
+	}
+
+	ctrl := gomock.NewController(t)
+	stream := mock_distqueue.NewMockDistributedQueueService_GetRangeServer(ctrl)
+
+	stream.EXPECT().Send(gomock.Any()).Times(1).DoAndReturn(func(item *distqueue.ServerQueueItem) error {
+		return io.EOF
+	})
+
+	err := server.GetRange(&distqueue.GetRangeRequest{
+		After:  timestamppb.New(now.Add(time.Duration(49))),
+		Before: timestamppb.New(now.Add(time.Duration(51))),
+	}, stream)
+	assert.Equal(t, err, io.EOF)
 }

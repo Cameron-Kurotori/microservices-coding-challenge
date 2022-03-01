@@ -126,6 +126,34 @@ func (m *MockServer) EXPECT() *MockServerMockRecorder {
 	return m.recorder
 }
 
+// Connect mocks base method.
+func (m *MockServer) Connect(arg0 distqueue.DistributedQueueService_ConnectServer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "Connect", arg0)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// Connect indicates an expected call of Connect.
+func (mr *MockServerMockRecorder) Connect(arg0 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Connect", reflect.TypeOf((*MockServer)(nil).Connect), arg0)
+}
+
+// GetRange mocks base method.
+func (m *MockServer) GetRange(arg0 *distqueue.GetRangeRequest, arg1 distqueue.DistributedQueueService_GetRangeServer) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetRange", arg0, arg1)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// GetRange indicates an expected call of GetRange.
+func (mr *MockServerMockRecorder) GetRange(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetRange", reflect.TypeOf((*MockServer)(nil).GetRange), arg0, arg1)
+}
+
 // Stats mocks base method.
 func (m *MockServer) Stats() stats {
 	m.ctrl.T.Helper()
@@ -138,20 +166,6 @@ func (m *MockServer) Stats() stats {
 func (mr *MockServerMockRecorder) Stats() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Stats", reflect.TypeOf((*MockServer)(nil).Stats))
-}
-
-// Sync mocks base method.
-func (m *MockServer) Sync(arg0 distqueue.DistributedQueueService_ConnectServer) error {
-	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "Sync", arg0)
-	ret0, _ := ret[0].(error)
-	return ret0
-}
-
-// Sync indicates an expected call of Sync.
-func (mr *MockServerMockRecorder) Sync(arg0 interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Sync", reflect.TypeOf((*MockServer)(nil).Sync), arg0)
 }
 
 // mustEmbedUnimplementedDistributedQueueServiceServer mocks base method.

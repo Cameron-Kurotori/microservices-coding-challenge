@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sort"
 	"sync"
 	"time"
 
 	"github.com/Cameron-Kurotori/microservices-coding-challenge/proto/distqueue"
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -45,8 +48,7 @@ type distQueueServer struct {
 	data       []*distqueue.ServerQueueItem
 	clients    map[string]*follower
 	clientLock sync.Mutex
-	distqueue.UnimplementedDistributedQueueServiceServer
-	prevTS *timestamppb.Timestamp
+	prevTS     *timestamppb.Timestamp
 }
 
 func (server *distQueueServer) Stats() stats {
@@ -57,7 +59,45 @@ func (server *distQueueServer) Stats() stats {
 	}
 }
 
-func (server *distQueueServer) Sync(stream distqueue.DistributedQueueService_ConnectServer) error {
+func (server *distQueueServer) GetRange(request *distqueue.GetRangeRequest, stream distqueue.DistributedQueueService_GetRangeServer) error {
+	server.queueLock.RLock()
+	start := 0
+	end := len(server.data)
+
+	if request.Before != nil && request.After != nil && request.After.AsTime().After(request.Before.AsTime()) {
+		return status.New(codes.InvalidArgument, "After must be a valid time after Before").Err()
+	}
+
+	if request.Before != nil {
+		end = sort.Search(end, func(i int) bool {
+			return server.data[len(server.data)-i-1].Ts.AsTime().Before(request.Before.AsTime())
+		})
+		end = len(server.data) - end
+	}
+
+	if request.After != nil {
+		start = sort.Search(end, func(i int) bool {
+			return server.data[i].Ts.AsTime().After(request.After.AsTime())
+		})
+	}
+
+	dataToSend := make(chan *distqueue.ServerQueueItem, end-start)
+	for _, item := range server.data[start:end] {
+		dataToSend <- item
+	}
+	close(dataToSend)
+	server.queueLock.RUnlock()
+
+	for item := range dataToSend {
+		if err := stream.Send(item); err != nil {
+			return err
+		}
+	}
+	return nil
+
+}
+
+func (server *distQueueServer) Connect(stream distqueue.DistributedQueueService_ConnectServer) error {
 	clientID := uuid.New().String()
 
 	ctx, cancelCtx := context.WithCancel(context.Background())
@@ -145,9 +185,33 @@ type Server interface {
 	Stats() stats
 }
 
+type backwardsCompatibleServer struct {
+	distqueue.UnimplementedDistributedQueueServiceServer
+	dqServer *distQueueServer
+}
+
+func (server *backwardsCompatibleServer) Stats() stats {
+	return server.dqServer.Stats()
+}
+
+// Connect initializes a connection between the workers and leader. Workers stream items
+// to the leader and the leader will determine the order of the items
+// and send it to all connected workers. Workers will only receive messages inserted into
+// the queue after Connect is called.
+func (server *backwardsCompatibleServer) Connect(stream distqueue.DistributedQueueService_ConnectServer) error {
+	return server.dqServer.Connect(stream)
+}
+
+// GetRange returns a stream of (in order) items between the given time range.
+func (server *backwardsCompatibleServer) GetRange(request *distqueue.GetRangeRequest, stream distqueue.DistributedQueueService_GetRangeServer) error {
+	return server.dqServer.GetRange(request, stream)
+}
+
 func New() Server {
 	server := &distQueueServer{
 		clients: make(map[string]*follower),
 	}
-	return server
+	return &backwardsCompatibleServer{
+		dqServer: server,
+	}
 }

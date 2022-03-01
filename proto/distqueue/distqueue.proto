@@ -20,8 +20,8 @@ message ServerQueueItem {
 }
 
 message GetRangeRequest {
-    google.protobuf.Timestamp start = 1;
-    google.protobuf.Timestamp end = 2;
+    google.protobuf.Timestamp after = 1;
+    google.protobuf.Timestamp before = 2;
 }
 
 service DistributedQueueService {

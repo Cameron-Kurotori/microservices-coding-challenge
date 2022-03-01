@@ -56,7 +56,7 @@ func setupClients(t *testing.T, numClients int, clientFinished func(), clientCan
 	// setup all the clients first for this test
 	for i := 0; i < numClients; i++ {
 		t.Logf("setting up client: %d", i)
-		c, clientCancel, err := client.New(addr, client.WithReceiveHandler(client.MonitorMissing()))
+		c, err := client.New(addr, client.WithReceiveHandler(client.MonitorMissing()))
 		if err != nil {
 			panic(err)
 		}
@@ -66,7 +66,7 @@ func setupClients(t *testing.T, numClients int, clientFinished func(), clientCan
 			done: func() {
 				clientFinished()
 				t.Log("Cancelling client")
-				clientCancel()
+				c.Done()
 				time.Sleep(time.Second * 1) // give enough time for client to actually cancel
 				clientCancelled()
 			},
