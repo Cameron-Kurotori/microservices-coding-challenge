@@ -35,7 +35,7 @@ func NewClient(target string) (grpc.ClientConnInterface, error) {
 
 func logStreamClientInterceptor(logger log.Logger) func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (grpc.ClientStream, error) {
-		logger = log.With(logger, "method", method, "stream_name", desc.StreamName)
+		logger := log.With(logger, "method", method, "stream_name", desc.StreamName)
 		_ = logger.Log("msg", "outgoing grpc client stream request")
 		defer func(start time.Time) {
 			_ = logger.Log("msg", "outgoing grpc client stream request complete", "took_ms", time.Since(start).Milliseconds())
@@ -46,7 +46,7 @@ func logStreamClientInterceptor(logger log.Logger) func(ctx context.Context, des
 
 func logStreamServerInterceptor(logger log.Logger) func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) error {
-		logger = log.With(logger, "method", info.FullMethod)
+		logger := log.With(logger, "method", info.FullMethod)
 		_ = logger.Log("msg", "outgoing grpc server stream request")
 		defer func(start time.Time) {
 			_ = logger.Log("msg", "outgoing grpc server stream request complete", "took_ms", time.Since(start).Milliseconds())
