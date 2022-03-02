@@ -39,7 +39,7 @@ func runClient(cmd *cobra.Command, args []string) error {
 	var errChan = make(chan error, 1)
 	router := mux.NewRouter()
 
-	itemQueue, err := newItemQueue(target, fromStart)
+	itemQueue, done, err := newItemQueue(target, fromStart)
 	if err != nil {
 		return err
 	}
@@ -50,7 +50,7 @@ func runClient(cmd *cobra.Command, args []string) error {
 
 	defer func() {
 		fmt.Fprintf(os.Stderr, "item queue client stopping...\n")
-		itemQueue.queue.Done()
+		done()
 		fmt.Fprintf(os.Stderr, "stopped\n")
 	}()
 

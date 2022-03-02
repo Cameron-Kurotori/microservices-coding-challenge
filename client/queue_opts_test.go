@@ -28,24 +28,18 @@ func TestWithReceiveHandler(t *testing.T) {
 		Id: "good",
 	}
 	stream.EXPECT().CloseSend()
-	stream.EXPECT().Recv().Times(7).DoAndReturn(func() (*distqueue.ServerQueueItem, error) {
-		if count > 5 {
-			return nil, io.EOF
-		}
-		if count > 4 {
-			return &distqueue.ServerQueueItem{
-				Item: &distqueue.QueueItem{
-					Item: anyItem(goodItem),
-				},
-			}, nil
-		}
-		return &distqueue.ServerQueueItem{
-			Item: &distqueue.QueueItem{
-				Item: anyItem(badItem),
-			},
-		}, nil
-	})
-	queue, err := new(dqClient, WithReceiveHandler(func(sqi *distqueue.ServerQueueItem, e error) (*distqueue.ServerQueueItem, error) {
+	stream.EXPECT().Recv().Times(5).Return(&distqueue.ServerQueueItem{
+		Item: &distqueue.QueueItem{
+			Item: anyItem(badItem),
+		},
+	}, nil)
+	stream.EXPECT().Recv().Return(&distqueue.ServerQueueItem{
+		Item: &distqueue.QueueItem{
+			Item: anyItem(goodItem),
+		},
+	}, nil)
+	stream.EXPECT().Recv().Return(nil, io.EOF)
+	queue, done, err := new(dqClient, WithReceiveHandler(func(sqi *distqueue.ServerQueueItem, e error) (*distqueue.ServerQueueItem, error) {
 		atomic.AddInt32(&count, 1)
 		return sqi, e
 	}, func(sqi *distqueue.ServerQueueItem, e error) (*distqueue.ServerQueueItem, error) {
@@ -58,14 +52,24 @@ func TestWithReceiveHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	<-queue.ReceiveErrors
-	queue.Done()
+	resultsChan := make(chan *anypb.Any, 2)
+	go func() {
+		for item := range queue.queueChan {
+			if item != nil {
+				resultsChan <- item
+			}
+		}
+		close(resultsChan)
+	}()
 
-	item, ok := <-queue.queueChan
+	<-queue.ReceiveErrors
+	done()
+
+	item, ok := <-resultsChan
 	assert.True(t, ok)
 	assert.Equal(t, goodItem.Id, decodeAnyItem(item).Id)
 
-	item, ok = <-queue.queueChan
+	item, ok = <-resultsChan
 	assert.False(t, ok)
 	assert.Nil(t, item)
 }
@@ -102,6 +106,9 @@ func anyItem(item *item.Item) *anypb.Any {
 }
 
 func decodeAnyItem(anyItem *anypb.Any) *item.Item {
+	if anyItem == nil {
+		return nil
+	}
 	decoded := &item.Item{}
 	_ = anyItem.UnmarshalTo(decoded)
 	return decoded

@@ -17,21 +17,21 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-func newItemQueue(target string, fromStart bool) (*itemQueue, error) {
+func newItemQueue(target string, fromStart bool) (*itemQueue, func(), error) {
 	opts := []client.QueueOpt{
 		client.WithReceiveHandler(client.MonitorMissing()),
 	}
 	if fromStart {
 		opts = append(opts, client.WarmStart(nil))
 	}
-	queue, err := client.New(target, opts...)
+	queue, done, err := client.New(target, opts...)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	return &itemQueue{
 		queue: queue,
-	}, nil
+	}, done, nil
 
 }
 
@@ -106,7 +106,18 @@ func (server *itemQueue) pop(w http.ResponseWriter, r *http.Request) *servermode
 
 	traceID := r.Header.Get(traceHeader)
 
-	anyItem := server.queue.Pop()
+	internalError := &servermodels.Error{
+		ErrorMessage: "internal error",
+		StatusCode:   http.StatusInternalServerError,
+		TraceID:      traceID,
+	}
+
+	anyItem, err := server.queue.Pop()
+	if err != nil && err != io.EOF {
+		// this should not happen
+		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while popping item", "err", err, "trace_id", traceID)
+		return internalError
+	}
 	if anyItem == nil {
 		w.WriteHeader(http.StatusNoContent)
 		_, _ = w.Write(nil)
@@ -114,15 +125,11 @@ func (server *itemQueue) pop(w http.ResponseWriter, r *http.Request) *servermode
 	}
 
 	var item item.Item
-	err := anyItem.UnmarshalTo(&item)
+	err = anyItem.UnmarshalTo(&item)
 	if err != nil {
 		// TODO add logging framework
 		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while decoding popped item", "err", err, "trace_id", traceID)
-		return &servermodels.Error{
-			ErrorMessage: "internal error",
-			StatusCode:   http.StatusInternalServerError,
-			TraceID:      traceID,
-		}
+		return internalError
 	}
 
 	resp := servermodels.Item{

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -56,7 +57,7 @@ func setupClients(t *testing.T, numClients int, clientFinished func(), clientCan
 	// setup all the clients first for this test
 	for i := 0; i < numClients; i++ {
 		t.Logf("setting up client: %d", i)
-		c, err := client.New(addr, client.WithReceiveHandler(client.MonitorMissing()))
+		c, done, err := client.New(addr, client.WithReceiveHandler(client.MonitorMissing()))
 		if err != nil {
 			panic(err)
 		}
@@ -66,7 +67,7 @@ func setupClients(t *testing.T, numClients int, clientFinished func(), clientCan
 			done: func() {
 				clientFinished()
 				t.Log("Cancelling client")
-				c.Done()
+				done()
 				time.Sleep(time.Second * 1) // give enough time for client to actually cancel
 				clientCancelled()
 			},
@@ -94,7 +95,10 @@ func runClient(t *testing.T, totalNumClients int, numToPush int, testClient test
 	items := []*item.Item{}
 	// pop from the queue client until we have the expected number of items
 	for {
-		queueItem := testClient.Pop()
+		queueItem, err := testClient.Pop()
+		if err != nil {
+			panic(err)
+		}
 		if queueItem == nil {
 			continue
 		}
@@ -128,46 +132,126 @@ func assertIdenticalItems(t *testing.T, allItems chan []*item.Item) {
 	}
 }
 
+func runWarmClient(referenceItems []*item.Item) func(t *testing.T) {
+	return func(t *testing.T) {
+		c, done, err := client.New(addr, client.WarmStart(nil))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer done()
+
+		items := make([]*item.Item, 0)
+		for {
+			queueItem, err := c.Pop()
+			if err != nil {
+				panic(err)
+			}
+			if queueItem == nil {
+				continue
+			}
+
+			t.Log("item popped")
+
+			unmarshalled := &item.Item{}
+			_ = queueItem.UnmarshalTo(unmarshalled)
+			items = append(items, unmarshalled)
+			if len(items) >= len(referenceItems) {
+				break
+			}
+		}
+		allItems := make(chan []*item.Item, 2)
+		allItems <- referenceItems
+		allItems <- items
+		close(allItems)
+		assertIdenticalItems(t, allItems)
+	}
+}
+
+func runWarmClientError(t *testing.T) {
+	var count int32 = 0
+	expectedErr := fmt.Errorf("max 5")
+	c, done, err := client.New(addr, client.WarmStart(nil), client.WithReceiveHandler(func(sqi *distqueue.ServerQueueItem, e error) (*distqueue.ServerQueueItem, error) {
+		if count > 4 {
+			return nil, expectedErr
+		}
+		atomic.AddInt32(&count, 1)
+		return sqi, e
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer done()
+
+	items := make([]*item.Item, 0)
+FOR_LOOP:
+	for {
+
+		queueItem, err := c.Pop()
+		if err != nil {
+			break FOR_LOOP
+		}
+		if queueItem == nil {
+			continue
+		}
+		unmarshalled := &item.Item{}
+		_ = queueItem.UnmarshalTo(unmarshalled)
+		items = append(items, unmarshalled)
+	}
+	assert.Equal(t, expectedErr, <-c.ReceiveErrors)
+	assert.Len(t, items, 5)
+}
+
 // TestIntegration sets up a server and 3 clients
 // Tests pushing and popping on the 3 clients.
 // All clients are setup at start (before any pushes)
 // so at end of process all should have identical queues to pop from.
 func TestIntegration(t *testing.T) {
-	dqServer := setupServer(t)
-	numClients := 3
+	var referenceItems []*item.Item
+	t.Run("multi_client_and_server", func(t *testing.T) {
+		dqServer := setupServer(t)
+		numClients := 3
 
-	// sync magic for making sure all parts run as intended
-	clientWait := sync.WaitGroup{}
-	clientWait.Add(numClients)
-	cancelWait := sync.WaitGroup{}
-	cancelWait.Add(numClients)
+		// sync magic for making sure all parts run as intended
+		clientWait := sync.WaitGroup{}
+		clientWait.Add(numClients)
+		cancelWait := sync.WaitGroup{}
+		cancelWait.Add(numClients)
 
-	clients := setupClients(t, numClients, clientWait.Done, cancelWait.Done)
-	allItems := make(chan []*item.Item, numClients)
-	for _, c := range clients {
-		go func(c testClient) {
-			defer c.done()
-			items := runClient(t, numClients, 3, c)
-			allItems <- items
-			t.Logf("%s: items=%v", c.id, items)
-		}(c)
-	}
+		clients := setupClients(t, numClients, clientWait.Done, cancelWait.Done)
+		allItems := make(chan []*item.Item, numClients)
 
-	clientWait.Wait()
-	close(allItems)
+		var getReferenceItems sync.Once
 
-	assertIdenticalItems(t, allItems)
+		for _, c := range clients {
+			go func(c testClient) {
+				defer c.done()
+				items := runClient(t, numClients, 3, c)
+				getReferenceItems.Do(func() {
+					referenceItems = items
+				})
+				allItems <- items
+				t.Logf("%s: items=%v", c.id, items)
+			}(c)
+		}
 
-	cancelDone := make(chan bool)
-	go func() {
-		cancelWait.Wait()
-		close(cancelDone)
-	}()
+		clientWait.Wait()
+		close(allItems)
 
-	select {
-	case <-cancelDone:
-		assert.Equal(t, 0, dqServer.Stats().NumberClients)
-	case <-time.After(time.Second * 5):
-		t.Fatal("failed to close clients on server")
-	}
+		assertIdenticalItems(t, allItems)
+
+		cancelDone := make(chan bool)
+		go func() {
+			cancelWait.Wait()
+			close(cancelDone)
+		}()
+
+		select {
+		case <-cancelDone:
+			assert.Equal(t, 0, dqServer.Stats().NumberClients)
+		case <-time.After(time.Second * 5):
+			t.Fatal("failed to close clients on server")
+		}
+	})
+	t.Run("warm_client_test", runWarmClient(referenceItems))
+	t.Run("warm_client_err_test", runWarmClientError)
 }
