@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-pushd ../distqueue || exit 1
+pushd .. || exit 1
+
 module="github.com/Cameron-Kurotori/microservices-coding-challenge"
 client_pkg="${module}/client"
 server_pkg="${module}/server"
