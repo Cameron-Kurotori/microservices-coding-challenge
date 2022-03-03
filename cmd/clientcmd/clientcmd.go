@@ -14,6 +14,7 @@ import (
 
 var ClientCmd = &cobra.Command{
 	Use:  "client --target target [--host host] [--port port]",
+	Long: "The client command sets up an HTTP server where callers can POST items and GET items to utilize the Distributed Queue. The order of GET items is consistent accross all clients.",
 	RunE: runClient,
 }
 
@@ -87,8 +88,8 @@ func runClient(cmd *cobra.Command, args []string) error {
 }
 
 func setupRouter(router *mux.Router, itemQueue *itemQueue) {
-	router.Path("/item").Methods(http.MethodPost).Handler(pushHandler(itemQueue))
-	router.Path("/item").Methods(http.MethodGet).Handler(popHandler(itemQueue))
+	router.Path("/item").Methods(http.MethodPost).HandlerFunc(itemQueue.pushHandler)
+	router.Path("/item").Methods(http.MethodGet).HandlerFunc(itemQueue.popHandler)
 }
 
 func setupMiddleware(handler http.Handler) http.Handler {

@@ -39,128 +39,140 @@ type itemQueue struct {
 	queue *client.Queue
 }
 
-func (server *itemQueue) push(w http.ResponseWriter, r *http.Request) *servermodels.Error {
-	decoder := json.NewDecoder(r.Body)
+// writeError is a helper function for writing an error response
+func writeError(rw http.ResponseWriter, err servermodels.Error) {
+	rw.Header().Set("Content-Type", "application/json")
+	rw.WriteHeader(err.StatusCode)
+	_, _ = rw.Write(err.Marshal())
+}
+
+// internalError is a helper function to create a new internal error with trace ID
+func internalError(traceID string) servermodels.Error {
+	return servermodels.Error{
+		ErrorMessage: "internal error",
+		StatusCode:   http.StatusInternalServerError,
+		TraceID:      traceID,
+	}
+}
+
+// anyItem converts a servermodels.Item to Any for use with queue
+func anyItem(itemRequest servermodels.Item) *anypb.Any {
+	anyItem, _ := anypb.New(&item.Item{
+		Id:        uuid.New().String(),
+		Int:       int64(*itemRequest.Int),
+		Timestamp: timestamppb.New(time.Now()),
+	})
+	return anyItem
+}
+
+// decodeItem converts an Any to the servermodels.Item for use with queue
+func decodeItem(anyItem *anypb.Any) (servermodels.Item, error) {
+	var item item.Item
+	err := anyItem.UnmarshalTo(&item)
+	if err != nil {
+		return servermodels.Item{}, err
+	}
+	return servermodels.Item{
+		Int: &item.Int,
+	}, nil
+}
+
+// validatePushItem performs http layer syntax and sematic checks on input
+func validatePushItem(itemRequest servermodels.Item) *servermodels.Error {
+	if itemRequest.Int == nil {
+		return &servermodels.Error{
+			ErrorMessage: "field 'int' must be specified",
+			StatusCode:   http.StatusBadRequest,
+		}
+	}
+	return nil
+}
+
+// decodeItemRequest decodes the reader into a servermodels.item and performs validation
+func decodeItemRequest(body io.Reader) (servermodels.Item, *servermodels.Error) {
+	decoder := json.NewDecoder(body)
 
 	decoder.DisallowUnknownFields()
 	var itemRequest servermodels.Item
-
-	traceID := r.Header.Get(traceHeader)
 
 	err := decoder.Decode(&itemRequest)
 	if err != nil {
 		errResp := servermodels.Error{
 			StatusCode: http.StatusBadRequest,
-			TraceID:    traceID,
 		}
 		if err == io.EOF {
 			errResp.ErrorMessage = "request body is required"
 		} else {
 			errResp.ErrorMessage = "invalid request body: " + err.Error()
 		}
-		return &errResp
+
+		return itemRequest, &errResp
+	}
+	return itemRequest, validatePushItem(itemRequest)
+}
+
+func (server *itemQueue) pushHandler(w http.ResponseWriter, r *http.Request) {
+	traceID := r.Header.Get(traceHeader)
+
+	itemRequest, serverErr := decodeItemRequest(r.Body)
+	if serverErr != nil {
+		serverErr.TraceID = traceID
+		writeError(w, *serverErr)
+		return
 	}
 
-	if itemRequest.Int == nil {
-		return &servermodels.Error{
-			ErrorMessage: "field 'int' must be specified",
-			StatusCode:   http.StatusBadRequest,
-			TraceID:      traceID,
-		}
-	}
-
-	anyItem, _ := anypb.New(&item.Item{
-		Id:        uuid.New().String(),
-		Int:       int64(*itemRequest.Int),
-		Timestamp: timestamppb.New(time.Now()),
-	})
-
-	err = server.queue.Push(anyItem)
+	err := server.queue.Push(anyItem(itemRequest))
 	if err != nil {
 		// TODO add logging framework
 		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while pushing item to queue", "err", err, "trace_id", traceID)
-		return &servermodels.Error{
+		writeError(w, servermodels.Error{
 			ErrorMessage: "internal error",
 			StatusCode:   http.StatusInternalServerError,
 			TraceID:      traceID,
-		}
+		})
+		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
 	_, _ = w.Write(nil)
-	return nil
 }
 
-func pushHandler(itemServer *itemQueue) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		err := itemServer.push(rw, r)
-		if err != nil {
-			rw.Header().Set("Content-Type", "application/json")
-			rw.WriteHeader(err.StatusCode)
-			_, _ = rw.Write(err.Marshal())
-		}
-	})
-}
-
-func (server *itemQueue) pop(w http.ResponseWriter, r *http.Request) *servermodels.Error {
-
-	traceID := r.Header.Get(traceHeader)
-
-	internalError := &servermodels.Error{
-		ErrorMessage: "internal error",
-		StatusCode:   http.StatusInternalServerError,
-		TraceID:      traceID,
+// writeItem writes the servermodels.Item response
+func writeItem(w http.ResponseWriter, item servermodels.Item, traceID string) {
+	body, err := json.Marshal(item)
+	if err != nil {
+		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while marshalling response body", "err", err, "trace_id", traceID)
+		writeError(w, internalError(traceID))
 	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(body)
+}
+
+func (server *itemQueue) popHandler(w http.ResponseWriter, r *http.Request) {
+	traceID := r.Header.Get(traceHeader)
 
 	anyItem, err := server.queue.Pop()
 	if err != nil && err != io.EOF {
 		// this should not happen
 		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while popping item", "err", err, "trace_id", traceID)
-		return internalError
+		writeError(w, internalError(traceID))
+		return
 	}
+
 	if anyItem == nil {
 		w.WriteHeader(http.StatusNoContent)
 		_, _ = w.Write(nil)
-		return nil
+		return
 	}
 
-	var item item.Item
-	err = anyItem.UnmarshalTo(&item)
+	item, err := decodeItem(anyItem)
 	if err != nil {
-		// TODO add logging framework
-		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while decoding popped item", "err", err, "trace_id", traceID)
-		return internalError
+		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while decoding queue item", "err", err, "trace_id", traceID)
+		writeError(w, internalError(traceID))
+		return
 	}
 
-	resp := servermodels.Item{
-		Int: &item.Int,
-	}
-
-	respBody, err := json.Marshal(resp)
-	if err != nil {
-		// TODO add logging framework
-		_ = level.Error(log.NewJSONLogger(os.Stderr)).Log("msg", "error while marshalling response body", "err", err, "trace_id", traceID)
-		return &servermodels.Error{
-			ErrorMessage: "internal error",
-			StatusCode:   http.StatusInternalServerError,
-			TraceID:      traceID,
-		}
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(respBody)
-
-	return nil
-}
-
-func popHandler(itemServer *itemQueue) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
-		err := itemServer.pop(rw, r)
-		if err != nil {
-			rw.Header().Set("Content-Type", "application/json")
-			rw.WriteHeader(err.StatusCode)
-			_, _ = rw.Write(err.Marshal())
-		}
-	})
+	writeItem(w, item, traceID)
 }

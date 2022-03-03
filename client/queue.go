@@ -69,6 +69,9 @@ func (q *Queue) processReceive(item *distqueue.ServerQueueItem, err error) error
 func (q *Queue) receive() error {
 	var lastTS *time.Time
 	if q.warmStart.items != nil {
+		// first go through all warm start items
+		// when the warm start go process is done, the channel will be closed
+		// and we can move on to receiving from regular stream
 		for warmItem := range q.warmStart.items {
 			err := q.processReceive(warmItem, nil)
 			if err != nil {
@@ -111,10 +114,6 @@ func (q *Queue) receive() error {
 }
 
 func (q *Queue) doWarmStart(dqClient distqueue.DistributedQueueServiceClient) error {
-	if !q.warmStart.enabled {
-		return nil
-	}
-
 	req := &distqueue.GetRangeRequest{}
 	if q.warmStart.after != nil {
 		req.After = timestamppb.New(*q.warmStart.after)
@@ -127,6 +126,9 @@ func (q *Queue) doWarmStart(dqClient distqueue.DistributedQueueServiceClient) er
 	q.warmStart.items = make(chan *distqueue.ServerQueueItem, 10)
 
 	go func() {
+		// close the channel once the GetRange stream is done
+		// which we expect since GetRange is not a long
+		// running stream.
 		defer close(q.warmStart.items)
 		for {
 			item, err := stream.Recv()
@@ -167,15 +169,19 @@ func new(dqClient distqueue.DistributedQueueServiceClient, opts ...QueueOpt) (*Q
 	for _, opt := range opts {
 		opt(q)
 	}
-	err = q.doWarmStart(dqClient)
-	if err != nil {
-		cancel()
-		return nil, nil, err
+
+	if q.warmStart.enabled {
+		err := q.doWarmStart(dqClient)
+		if err != nil {
+			cancel()
+			return nil, nil, err
+		}
 	}
 
 	receiveErrChan := make(chan error, 1)
 	q.ReceiveErrors = receiveErrChan
-	// receive messages from the server
+
+	// start goroutine to receive messages from the server in the background
 	go func() {
 		err := q.receive()
 		if err != nil {

@@ -14,6 +14,7 @@ import (
 
 var ServerCmd = &cobra.Command{
 	Use:  "server [--host host] [--port port]",
+	Long: "The server command starts up a distributed queue server",
 	RunE: runServer,
 }
 

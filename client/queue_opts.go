@@ -27,6 +27,7 @@ func WithReceiveHandler(chain ...ReceiveHandler) QueueOpt {
 	})
 }
 
+// ReceiveHandler is the interface for custom response handling.
 type ReceiveHandler func(*distqueue.ServerQueueItem, error) (*distqueue.ServerQueueItem, error)
 
 var _ ReceiveHandler = MonitorMissing()

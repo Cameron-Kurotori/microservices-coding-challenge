@@ -26,6 +26,8 @@ type follower struct {
 	ctx    context.Context
 }
 
+// send will send each new received ServerQueueItem over grpc stream
+// until its context is cancelled or the connection is closed
 func (f *follower) send() error {
 	for {
 		select {
@@ -125,8 +127,10 @@ func (server *distQueueServer) Connect(stream distqueue.DistributedQueueService_
 		delete(server.clients, clientID)
 	}
 
+	// once connection is finish, cleanup the client from the list
 	defer cancelFunc()
 
+	// start goroutine to receive stream messages in the background
 	go func() {
 		err := server.receive(stream)
 		if err != nil {
@@ -134,9 +138,14 @@ func (server *distQueueServer) Connect(stream distqueue.DistributedQueueService_
 		}
 		close(errChan)
 	}()
+
+	// block on errChan since we need to keep connection open until we want the connection to finish
 	return <-errChan
 }
 
+// push is a helper function to convert received items to ServerQueueItem and
+// send it to all the client channels (only internally, follower goroutine
+// should send out on GRPC stream)
 func (server *distQueueServer) push(item *distqueue.QueueItem) {
 	server.queueLock.Lock()
 	defer server.queueLock.Unlock()
@@ -161,6 +170,8 @@ type QueueReceiver interface {
 	Context() context.Context
 }
 
+// receive will continuously receive items on the grpc stream and
+// push newly received ones to all the connected clients
 func (server *distQueueServer) receive(receiver QueueReceiver) error {
 	for {
 		item, err := receiver.Recv()
@@ -185,6 +196,9 @@ type Server interface {
 	Stats() stats
 }
 
+// backwardsCompatibleServer implements the GRPC Spec for a DistributedQueueServiceServer
+// this was done so when testing the actual implementation we don't unintentionally use the
+// unimplemented methods.
 type backwardsCompatibleServer struct {
 	distqueue.UnimplementedDistributedQueueServiceServer
 	dqServer *distQueueServer
